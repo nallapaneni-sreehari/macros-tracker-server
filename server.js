@@ -8,6 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 const MONGO_URI = process.env.MONGO_URI;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DB_NAME = 'macro_tracker';
 const COLLECTION = 'kv_store';
 
@@ -20,6 +21,54 @@ async function connectDB() {
   await db.collection(COLLECTION).createIndex({ key: 1 }, { unique: true });
   console.log('Connected to MongoDB');
 }
+
+// POST /api/ai/parse-recipe — parse recipe text into food items with macros
+app.post('/api/ai/parse-recipe', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Recipe text is required' });
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.2,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a nutrition expert. Parse the user's recipe/food description into individual food items with accurate macros. Return ONLY valid JSON array with no markdown. Each item must have: name (string), servingSize (number), servingUnit (string: g/ml/piece/cup/tbsp/tsp/oz/serving), calories (number), protein (number in grams), carbs (number in grams), fat (number in grams), fiber (number in grams), sugar (number in grams), sodium (number in mg). Be accurate with Indian foods, common recipes, and standard nutritional values. Always return realistic macro estimates.`
+          },
+          {
+            role: 'user',
+            content: text.trim()
+          }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      return res.status(502).json({ error: 'OpenAI API error', details: err });
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content.trim();
+
+    // Parse the JSON from the response, stripping markdown fences if present
+    const jsonStr = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    const items = JSON.parse(jsonStr);
+
+    res.json({ items });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // GET /api/storage/:userId/:key — get value by key for a user
 app.get('/api/storage/:userId/:key', async (req, res) => {
