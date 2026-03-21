@@ -1,6 +1,6 @@
 services:
   mongo:
-    image: bitnami/mongodb:7.0
+    image: bitnami/mongodb:7.0.18
     container_name: macro-tracker-mongo
     restart: unless-stopped
     environment:
