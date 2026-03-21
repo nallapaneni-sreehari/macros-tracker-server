@@ -1,12 +1,12 @@
 services:
   mongo:
-    image: mongo:7
+    image: bitnami/mongodb:7.0
     container_name: macro-tracker-mongo
     restart: unless-stopped
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
     volumes:
-      - mongo-data:/data/db
-    ports:
-      - "27017:27017"
+      - mongo-data:/bitnami/mongodb
 
   api:
     build: .
