@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const { MongoClient } = require('mongodb');
 require('dotenv').config({ path: __dirname + '/.env' });
 
@@ -21,6 +22,11 @@ async function connectDB() {
   await db.collection(COLLECTION).createIndex({ key: 1 }, { unique: true });
   console.log('Connected to MongoDB');
 }
+
+// GET / — serve landing page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views/index.html'));
+});
 
 // POST /api/ai/parse-recipe — parse recipe text into food items with macros
 app.post('/api/ai/parse-recipe', async (req, res) => {
@@ -122,9 +128,9 @@ app.get('/api/storage/:userId', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-connectDB().then(() => {
+// connectDB().then(() => {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}).catch(err => {
-  console.error('Failed to connect to MongoDB:', err);
-  process.exit(1);
-});
+// }).catch(err => {
+//   console.error('Failed to connect to MongoDB:', err);
+//   process.exit(1);
+// });

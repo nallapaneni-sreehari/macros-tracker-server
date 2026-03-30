@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MacroTracker — Know Your Fuel</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- AOS — Animate on Scroll -->
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+
+  <!-- Swiper — touch slider -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js"></script>
+
+  <!-- Google Fonts — Urbanist -->
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Urbanist', 'sans-serif'] },
+          colors: {
+            primary: { DEFAULT: '#6C5CE7', light: '#a29bfe', dark: '#4834d4' },
+            accent:  { DEFAULT: '#e17055', light: '#fab1a0' },
+            surface: '#0f0e1a',
+            card:    '#1a1928',
+            border:  '#2d2b45',
+          },
+          backgroundImage: {
+            'hero-grad':   'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(108,92,231,0.35) 0%, transparent 70%)',
+            'pill-grad':   'linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%)',
+            'accent-grad': 'linear-gradient(135deg, #e17055 0%, #fab1a0 100%)',
+            'card-grad':   'linear-gradient(135deg, rgba(108,92,231,0.15) 0%, rgba(26,25,40,0) 100%)',
+          },
+          keyframes: {
+            'float': { '0%,100%': {transform:'translateY(0)'}, '50%': {transform:'translateY(-12px)'} },
+            'pulse-ring': { '0%':  {transform:'scale(0.95)', opacity:'1'}, '100%':  {transform:'scale(1.4)', opacity:'0'} },
+            'gradient-x': { '0%,100%':  {backgroundPosition:'0% 50%'}, '50%':  {backgroundPosition:'100% 50%'} },
+          },
+          animation: {
+            float:       'float 4s ease-in-out infinite',
+            'pulse-ring':'pulse-ring 2s ease-out infinite',
+            'gradient-x':'gradient-x 4s ease infinite',
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { background-color: #0f0e1a; color: #e2e0ff; font-family: 'Urbanist', sans-serif; }
+
+    /* Glassmorphism card */
+    .glass {
+      background: rgba(26,25,40,0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(108,92,231,0.18);
+    }
+
+    /* Gradient text */
+    .grad-text {
+      background: linear-gradient(135deg, #a29bfe 0%, #6C5CE7 40%, #e17055 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Progress bar fill animation */
+    .bar-fill { animation: barGrow 1.4s cubic-bezier(.4,0,.2,1) forwards; transform-origin: left; }
+    @keyframes barGrow { from { transform: scaleX(0); } }
+
+    /* Noise texture overlay */
+    .noise::after {
+      content:''; position:absolute; inset:0; pointer-events:none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity:.4;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background: #0f0e1a; }
+    ::-webkit-scrollbar-thumb { background: #6C5CE7; border-radius:3px; }
+
+    /* Nav link hover */
+    .nav-link { position:relative; }
+    .nav-link::after { content:''; position:absolute; bottom:-2px; left:0; width:0; height:2px; background:#6C5CE7; border-radius:2px; transition:width .3s; }
+    .nav-link:hover::after { width:100%; }
+
+    /* Phone mockup shine */
+    .phone-shine { position:relative; overflow:hidden; }
+    .phone-shine::before {
+      content:''; position:absolute; top:-60%; left:-60%; width:40%; height:180%;
+      background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%);
+      transform: skewX(-10deg);
+      animation: shine 4s ease-in-out infinite;
+    }
+    @keyframes shine { 0%,100% {left:-60%} 50% {left:120%} }
+
+    /* Swiper testimonial */
+    .swiper-pagination-bullet { background: #6C5CE7; }
+    .swiper-pagination-bullet-active { transform: scale(1.3); }
+
+    /* Section BG blobs */
+    .blob {
+      position:absolute; border-radius:50%; filter:blur(80px); pointer-events:none; opacity:0.25;
+    }
+  </style>
+</head>
+<body class="relative overflow-x-hidden">
+
+  <!-- ══════════════════════════════════════════════════════════
+       NAV
+  ══════════════════════════════════════════════════════════ -->
+  <nav id="navbar" class="fixed top-0 inset-x-0 z-50 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-2 group">
+        <div class="w-9 h-9 rounded-xl bg-pill-grad flex items-center justify-center shadow-lg shadow-primary/30">
+          <i class="ph ph-lightning text-white text-lg"></i>
+        </div>
+        <span class="text-xl font-black tracking-tight">Macro<span class="text-primary">Tracker</span></span>
+      </a>
+
+      <!-- Desktop links -->
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
+        <a href="#features" class="nav-link hover:text-white transition-colors">Features</a>
+        <a href="#how-it-works" class="nav-link hover:text-white transition-colors">How it Works</a>
+        <a href="#ai" class="nav-link hover:text-white transition-colors">AI</a>
+        <a href="#testimonials" class="nav-link hover:text-white transition-colors">Reviews</a>
+      </div>
+
+      <!-- CTA -->
+      <a href="#download" class="hidden md:inline-flex items-center gap-2 bg-pill-grad text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-transform">
+        <i class="ph ph-device-mobile-camera"></i>
+        Get the App
+      </a>
+
+      <!-- Mobile hamburger -->
+      <button id="hamburger" class="md:hidden text-white/70 hover:text-white">
+        <i class="ph ph-list text-2xl"></i>
+      </button>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="md:hidden hidden glass border-t border-border">
+      <div class="flex flex-col px-6 py-4 gap-5 text-sm font-medium text-white/70">
+        <a href="#features" class="hover:text-white">Features</a>
+        <a href="#how-it-works" class="hover:text-white">How it Works</a>
+        <a href="#ai" class="hover:text-white">AI</a>
+        <a href="#testimonials" class="hover:text-white">Reviews</a>
+        <a href="#download" class="bg-pill-grad text-white font-semibold px-4 py-2.5 rounded-xl text-center">Get the App</a>
+      </div>
+    </div>
+  </nav>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       HERO
+  ══════════════════════════════════════════════════════════ -->
+  <section id="hero" class="relative min-h-screen flex items-center pt-24 pb-20 overflow-hidden noise">
+    <!-- Background blobs -->
+    <div class="blob w-[600px] h-[600px] bg-primary top-[-200px] left-[-200px]"></div>
+    <div class="blob w-[400px] h-[400px] bg-accent top-[40%] right-[-150px]"></div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+      <!-- Left: Copy -->
+      <div>
+        <!-- Pill badge -->
+        <div data-aos="fade-down" data-aos-duration="600" class="inline-flex items-center gap-2 bg-primary/20 border border-primary/30 text-primary-light text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block"></span>
+          AI-powered nutrition tracking
+        </div>
+
+        <h1 data-aos="fade-up" data-aos-duration="700" data-aos-delay="100" class="text-5xl md:text-6xl lg:text-7xl font-black leading-[1.08] tracking-tight mb-6">
+          Know your<br />
+          <span class="grad-text">fuel.</span><br />
+          Own your<br />
+          <span class="grad-text">gains.</span>
+        </h1>
+
+        <p data-aos="fade-up" data-aos-duration="700" data-aos-delay="200" class="text-white/55 text-lg leading-relaxed mb-10 max-w-md">
+          Track calories, protein, carbs, fat &amp; fiber with AI-assisted recipe parsing. Beautiful daily summaries. Zero friction logging.
+        </p>
+
+        <!-- CTAs -->
+        <div data-aos="fade-up" data-aos-duration="700" data-aos-delay="300" class="flex flex-wrap gap-4 mb-12">
+          <a href="https://play.google.com/store/apps/details?id=YOUR_PACKAGE_NAME" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2.5 bg-pill-grad text-white font-bold px-7 py-4 rounded-2xl shadow-xl shadow-primary/40 hover:scale-105 active:scale-95 transition-transform text-base">
+            <i class="ph ph-google-play-logo text-xl"></i>
+            Download Free
+          </a>
+          <a href="#how-it-works" class="inline-flex items-center gap-2.5 bg-white/5 border border-white/10 text-white/80 font-semibold px-7 py-4 rounded-2xl hover:bg-white/10 transition-colors text-base">
+            <i class="ph ph-play-circle text-xl"></i>
+            See how it works
+          </a>
+        </div>
+
+        <!-- Tech stack badges -->
+        <div data-aos="fade-up" data-aos-duration="600" data-aos-delay="400" class="flex flex-wrap gap-3">
+          <span class="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 text-white/60 text-xs font-medium px-3 py-1.5 rounded-full">
+            <i class="ph ph-device-mobile text-primary-light"></i> Ionic + Angular
+          </span>
+          <span class="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 text-white/60 text-xs font-medium px-3 py-1.5 rounded-full">
+            <i class="ph ph-brain text-primary-light"></i> GPT-4o Powered
+          </span>
+          <span class="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 text-white/60 text-xs font-medium px-3 py-1.5 rounded-full">
+            <i class="ph ph-lock text-green-400"></i> Self-hosted &amp; Private
+          </span>
+          <span class="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 text-white/60 text-xs font-medium px-3 py-1.5 rounded-full">
+            <i class="ph ph-open-source-logo text-primary-light"></i> Open Source
+          </span>
+        </div>
+      </div>
+
+      <!-- Right: Phone mockup -->
+      <div data-aos="fade-left" data-aos-duration="900" data-aos-delay="200" class="flex justify-center lg:justify-end">
+        <div class="relative animate-float">
+          <!-- Glow rings -->
+          <div class="absolute inset-0 rounded-[48px] bg-primary/30 blur-3xl scale-110"></div>
+
+          <!-- Phone shell -->
+          <div class="phone-shine relative w-[300px] h-[620px] bg-card rounded-[44px] border-2 border-white/10 shadow-2xl shadow-primary/20 overflow-hidden">
+            <!-- Notch -->
+            <div class="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-surface rounded-full z-10"></div>
+
+            <!-- Screen content -->
+            <div class="absolute inset-0 bg-gradient-to-b from-[#1a1928] to-[#0f0e1a] p-5 pt-14">
+              <!-- Header -->
+              <p class="text-xs text-white/40 mb-1">Good morning, Alex 👋</p>
+              <h3 class="text-lg font-bold mb-4">Today's Summary</h3>
+
+              <!-- Macro cards -->
+              <div class="grid grid-cols-2 gap-2 mb-4">
+                <div class="glass rounded-2xl p-3">
+                  <p class="text-[10px] text-white/40 mb-1">Calories</p>
+                  <p class="text-xl font-black text-white">1,640</p>
+                  <p class="text-[10px] text-white/40">/ 2,000 kcal</p>
+                  <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-red-400 to-orange-400 rounded-full bar-fill" style="width:82%"></div>
+                  </div>
+                </div>
+                <div class="glass rounded-2xl p-3">
+                  <p class="text-[10px] text-white/40 mb-1">Protein</p>
+                  <p class="text-xl font-black text-white">118g</p>
+                  <p class="text-[10px] text-white/40">/ 150g</p>
+                  <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full bar-fill" style="width:79%;animation-delay:.2s;"></div>
+                  </div>
+                </div>
+                <div class="glass rounded-2xl p-3">
+                  <p class="text-[10px] text-white/40 mb-1">Carbs</p>
+                  <p class="text-xl font-black text-white">195g</p>
+                  <p class="text-[10px] text-white/40">/ 250g</p>
+                  <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full bar-fill" style="width:78%;animation-delay:.4s;"></div>
+                  </div>
+                </div>
+                <div class="glass rounded-2xl p-3">
+                  <p class="text-[10px] text-white/40 mb-1">Fat</p>
+                  <p class="text-xl font-black text-white">52g</p>
+                  <p class="text-[10px] text-white/40">/ 65g</p>
+                  <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-purple-400 to-violet-400 rounded-full bar-fill" style="width:80%;animation-delay:.6s;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Water -->
+              <div class="glass rounded-2xl p-3 flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <i class="ph-fill ph-drop text-blue-400 text-lg"></i>
+                  <div>
+                    <p class="text-xs font-semibold">Water</p>
+                    <p class="text-[10px] text-white/40">1.75 / 3.0 L</p>
+                  </div>
+                </div>
+                <div class="flex gap-1">
+                  <div class="w-4 h-6 rounded-sm bg-blue-500 opacity-100"></div>
+                  <div class="w-4 h-6 rounded-sm bg-blue-500 opacity-100"></div>
+                  <div class="w-4 h-6 rounded-sm bg-blue-500 opacity-60"></div>
+                  <div class="w-4 h-6 rounded-sm bg-white/10"></div>
+                  <div class="w-4 h-6 rounded-sm bg-white/10"></div>
+                </div>
+              </div>
+
+              <!-- Meals -->
+              <div class="space-y-2">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <i class="ph ph-sun text-primary text-xs"></i>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-xs font-semibold">Breakfast</p>
+                    <p class="text-[10px] text-white/40">480 cal</p>
+                  </div>
+                  <i class="ph ph-check-circle text-green-400 text-sm"></i>
+                </div>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                    <i class="ph ph-fork-knife text-orange-400 text-xs"></i>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-xs font-semibold">Lunch</p>
+                    <p class="text-[10px] text-white/40">620 cal</p>
+                  </div>
+                  <i class="ph ph-check-circle text-green-400 text-sm"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Home bar -->
+            <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-28 h-1 bg-white/20 rounded-full"></div>
+          </div>
+
+          <!-- Floating badges -->
+          <div class="absolute -left-14 top-20 glass rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-xl">
+            <div class="w-8 h-8 rounded-xl bg-green-500/20 flex items-center justify-center">
+              <i class="ph ph-lightning text-green-400 text-sm"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold">Goal Hit!</p>
+              <p class="text-[10px] text-white/40">Protein 💪</p>
+            </div>
+          </div>
+
+          <div class="absolute -right-14 bottom-28 glass rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-xl">
+            <div class="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center">
+              <i class="ph ph-brain text-primary-light text-sm"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold">AI Parsed</p>
+              <p class="text-[10px] text-white/40">12 items ✨</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-white/30 text-xs animate-bounce">
+      <i class="ph ph-caret-down text-lg"></i>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATS BAR
+  ══════════════════════════════════════════════════════════ -->
+  <section class="py-10 border-y border-border relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5"></div>
+    <div class="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center relative z-10">
+      <div data-aos="fade-up" data-aos-delay="0">
+        <p class="text-4xl font-black grad-text mb-1">5+</p>
+        <p class="text-sm text-white/50">Macros Tracked</p>
+      </div>
+      <div data-aos="fade-up" data-aos-delay="100">
+        <p class="text-4xl font-black grad-text mb-1">AI</p>
+        <p class="text-sm text-white/50">Powered Parsing</p>
+      </div>
+      <div data-aos="fade-up" data-aos-delay="200">
+        <p class="text-4xl font-black grad-text mb-1">∞</p>
+        <p class="text-sm text-white/50">Meal Templates</p>
+      </div>
+      <div data-aos="fade-up" data-aos-delay="300">
+        <p class="text-4xl font-black grad-text mb-1">Free</p>
+        <p class="text-sm text-white/50">Forever Plan</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       FEATURES
+  ══════════════════════════════════════════════════════════ -->
+  <section id="features" class="py-28 relative overflow-hidden">
+    <div class="blob w-[500px] h-[500px] bg-primary top-10 right-[-200px]"></div>
+
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <!-- Heading -->
+      <div class="text-center mb-20" data-aos="fade-up">
+        <div class="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary-light text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
+          <i class="ph ph-star-four text-sm"></i>
+          Everything you need
+        </div>
+        <h2 class="text-4xl md:text-5xl font-black mb-4">Built for <span class="grad-text">real results</span></h2>
+        <p class="text-white/50 text-lg max-w-xl mx-auto">Not just a calorie counter. A full nutrition command center in your pocket.</p>
+      </div>
+
+      <!-- Feature grid -->
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- F1 -->
+        <div data-aos="fade-up" data-aos-delay="0" class="glass rounded-3xl p-7 hover:border-primary/40 transition-colors group cursor-default">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mb-5 shadow-lg shadow-red-500/30 group-hover:scale-110 transition-transform">
+            <i class="ph ph-fire text-white text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2">Full Macro Dashboard</h3>
+          <p class="text-white/50 text-sm leading-relaxed">
+            Calories, Protein, Carbs, Fat, and Fiber — all tracked with beautiful animated progress bars against your personal goals.
+          </p>
+        </div>
+
+        <!-- F2 -->
+        <div data-aos="fade-up" data-aos-delay="80" class="glass rounded-3xl p-7 hover:border-primary/40 transition-colors group cursor-default">
+          <div class="w-12 h-12 rounded-2xl bg-pill-grad flex items-center justify-center mb-5 shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform">
+            <i class="ph ph-brain text-white text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2">AI Recipe Parser</h3>
+          <p class="text-white/50 text-sm leading-relaxed">
+            Paste any recipe or describe a meal in plain text. GPT-4o instantly breaks it into individual food items with accurate macros.
+          </p>
+          <span class="inline-block mt-4 text-xs font-semibold text-primary-light bg-primary/10 px-3 py-1 rounded-full">Powered by GPT-4o mini</span>
+        </div>
+
+        <!-- F3 -->
+        <div data-aos="fade-up" data-aos-delay="160" class="glass rounded-3xl p-7 hover:border-primary/40 transition-colors group cursor-default">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-5 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+            <i class="ph ph-drop text-white text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2">Water Intake Tracker</h3>
+          <p class="text-white/50 text-sm leading-relaxed">
+            Log hydration with quick +/- buttons or tap to enter a custom value. Never miss your daily water goal again.
+          </p>
+        </div>
+
+        <!-- F4 -->
+        <div data-aos="fade-up" data-aos-delay="0" class="glass rounded-3xl p-7 hover:border-primary/40 transition-colors group cursor-default">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center mb-5 shadow-lg shadow-green-500/30 group-hover:scale-110 transition-transform">
+            <i class="ph ph-bookmarks text-white text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2">Meal Templates</h3>
+          <p class="text-white/50 text-sm leading-relaxed">
+            Save frequent meals as templates. Reapply your "Gym Day Lunch" to any day with a single tap.
+          </p>
+        </div>
+
+        <!-- F5 -->
+        <div data-aos="fade-up" data-aos-delay="80" class="glass rounded-3xl p-7 hover:border-primary/40 transition-colors group cursor-default">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-500 flex items-center justify-center mb-5 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
+            <i class="ph ph-clock-counter-clockwise text-white text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2">Full History Log</h3>
+          <p class="text-white/50 text-sm leading-relaxed">
+            Navigate any past date to review meals and macros. See goal completion at a glance with color-coded indicators.
+          </p>
+        </div>
+
+        <!-- F6 -->
+        <div data-aos="fade-up" data-aos-delay="160" class="glass rounded-3xl p-7 hover:border-primary/40 transition-colors group cursor-default">
+          <div class="w-12 h-12 rounded-2xl bg-accent-grad flex items-center justify-center mb-5 shadow-lg shadow-accent/30 group-hover:scale-110 transition-transform">
+            <i class="ph ph-sliders-horizontal text-white text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2">Custom Macro Goals</h3>
+          <p class="text-white/50 text-sm leading-relaxed">
+            Set your own calorie and macro targets. Switch between cut, bulk, or maintenance profiles in seconds.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       HOW IT WORKS
+  ══════════════════════════════════════════════════════════ -->
+  <section id="how-it-works" class="py-28 relative overflow-hidden">
+    <div class="blob w-[400px] h-[400px] bg-accent bottom-0 left-[-150px]"></div>
+    <div class="max-w-5xl mx-auto px-6 relative z-10">
+      <div class="text-center mb-20" data-aos="fade-up">
+        <div class="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 text-accent-light text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
+          <i class="ph ph-steps text-sm"></i>
+          Simple workflow
+        </div>
+        <h2 class="text-4xl md:text-5xl font-black mb-4">Up and running in <span class="grad-text">60 seconds</span></h2>
+        <p class="text-white/50 text-lg max-w-lg mx-auto">Three steps between you and crystal-clear nutrition clarity.</p>
+      </div>
+
+      <div class="relative">
+        <!-- Connector line -->
+        <div class="hidden md:block absolute top-12 left-[calc(16.666%+1.5rem)] right-[calc(16.666%+1.5rem)] h-px bg-gradient-to-r from-primary via-accent to-primary opacity-30"></div>
+
+        <div class="grid md:grid-cols-3 gap-12">
+          <div data-aos="fade-up" data-aos-delay="0" class="flex flex-col items-center text-center">
+            <div class="relative mb-6">
+              <div class="w-16 h-16 rounded-2xl bg-pill-grad flex items-center justify-center shadow-xl shadow-primary/40">
+                <i class="ph ph-target text-white text-2xl"></i>
+              </div>
+              <div class="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-surface border-2 border-primary text-xs font-black flex items-center justify-center text-primary">1</div>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Set Your Goals</h3>
+            <p class="text-white/50 text-sm leading-relaxed">Enter your daily calorie and macro targets. Takes 30 seconds.</p>
+          </div>
+
+          <div data-aos="fade-up" data-aos-delay="150" class="flex flex-col items-center text-center">
+            <div class="relative mb-6">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center shadow-xl shadow-green-500/40">
+                <i class="ph ph-fork-knife text-white text-2xl"></i>
+              </div>
+              <div class="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-surface border-2 border-green-500 text-xs font-black flex items-center justify-center text-green-400">2</div>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Log Your Meals</h3>
+            <p class="text-white/50 text-sm leading-relaxed">Add meals manually, from templates, or paste a recipe and let AI do the work.</p>
+          </div>
+
+          <div data-aos="fade-up" data-aos-delay="300" class="flex flex-col items-center text-center">
+            <div class="relative mb-6">
+              <div class="w-16 h-16 rounded-2xl bg-accent-grad flex items-center justify-center shadow-xl shadow-accent/40">
+                <i class="ph ph-chart-line-up text-white text-2xl"></i>
+              </div>
+              <div class="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-surface border-2 border-accent text-xs font-black flex items-center justify-center text-accent">3</div>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Track Progress</h3>
+            <p class="text-white/50 text-sm leading-relaxed">Review your history, spot patterns, and stay consistent day after day.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       AI SPOTLIGHT
+  ══════════════════════════════════════════════════════════ -->
+  <section id="ai" class="py-28 relative overflow-hidden">
+    <div class="blob w-[600px] h-[600px] bg-primary top-0 left-1/2 -translate-x-1/2"></div>
+    <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center relative z-10">
+
+      <!-- Left: AI terminal card -->
+      <div data-aos="fade-right" data-aos-duration="800" class="order-2 lg:order-1">
+        <div class="glass rounded-3xl overflow-hidden shadow-2xl shadow-primary/20">
+          <!-- Terminal header -->
+          <div class="flex items-center gap-2 px-5 py-4 border-b border-border">
+            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+            <span class="ml-3 text-xs text-white/40 font-mono">AI Recipe Parser</span>
+          </div>
+
+          <!-- Input area -->
+          <div class="p-6 border-b border-border">
+            <p class="text-xs text-white/40 mb-2 font-mono">// You typed:</p>
+            <p class="text-sm text-white/80 leading-relaxed font-mono">"2 chapatis with dal makhani and a side of raita with curd"</p>
+          </div>
+
+          <!-- Output -->
+          <div class="p-6 space-y-3">
+            <p class="text-xs text-primary-light font-semibold mb-4 font-mono">✦ Parsed 4 food items</p>
+            <div class="flex items-center justify-between text-sm py-2 border-b border-border/40">
+              <span class="font-medium">Chapati × 2</span>
+              <div class="flex gap-4 text-xs text-white/50">
+                <span class="text-orange-400 font-semibold">212 cal</span>
+                <span>P: 6g</span><span>C: 42g</span><span>F: 3g</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-sm py-2 border-b border-border/40">
+              <span class="font-medium">Dal Makhani</span>
+              <div class="flex gap-4 text-xs text-white/50">
+                <span class="text-orange-400 font-semibold">185 cal</span>
+                <span>P: 9g</span><span>C: 22g</span><span>F: 8g</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-sm py-2 border-b border-border/40">
+              <span class="font-medium">Raita (½ cup)</span>
+              <div class="flex gap-4 text-xs text-white/50">
+                <span class="text-orange-400 font-semibold">68 cal</span>
+                <span>P: 4g</span><span>C: 7g</span><span>F: 2g</span>
+              </div>
+            </div>
+            <div class="pt-3 flex items-center justify-between">
+              <span class="text-sm font-bold">Total</span>
+              <div class="flex gap-4 text-sm font-bold">
+                <span class="text-orange-400">465 cal</span>
+                <span class="text-green-400">P: 19g</span>
+                <span class="text-yellow-400">C: 71g</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Copy -->
+      <div class="order-1 lg:order-2">
+        <div data-aos="fade-left" data-aos-duration="800">
+          <div class="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary-light text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
+            <i class="ph ph-sparkle text-sm"></i>
+            Powered by GPT-4o mini
+          </div>
+          <h2 class="text-4xl md:text-5xl font-black mb-6">Describe food.<br /><span class="grad-text">Get macros.</span></h2>
+          <p class="text-white/55 text-lg leading-relaxed mb-8">
+            Stop manually searching every ingredient. Type a meal description — even complicated recipes or Indian home cooking — and our AI instantly returns a complete nutritional breakdown per ingredient.
+          </p>
+          <ul class="space-y-3 text-sm text-white/60">
+            <li class="flex items-center gap-3"><i class="ph ph-check-circle text-green-400 text-lg flex-shrink-0"></i> Understands regional & home-cooked foods</li>
+            <li class="flex items-center gap-3"><i class="ph ph-check-circle text-green-400 text-lg flex-shrink-0"></i> Accurate calories, protein, carbs, fat, fiber, sugar, sodium</li>
+            <li class="flex items-center gap-3"><i class="ph ph-check-circle text-green-400 text-lg flex-shrink-0"></i> Parses entire recipes in seconds</li>
+            <li class="flex items-center gap-3"><i class="ph ph-check-circle text-green-400 text-lg flex-shrink-0"></i> Each item individually editable after parsing</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       TESTIMONIALS (Swiper carousel)
+  ══════════════════════════════════════════════════════════ -->
+  <section id="testimonials" class="py-28 relative overflow-hidden">
+    <div class="blob w-[300px] h-[300px] bg-accent top-20 right-0"></div>
+
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <div class="text-center mb-16" data-aos="fade-up">
+        <div class="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 text-accent-light text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
+          <i class="ph ph-heart text-sm"></i>
+          Loved by users
+        </div>
+        <h2 class="text-4xl md:text-5xl font-black mb-4">Real people, <span class="grad-text">real results</span></h2>
+      </div>
+
+      <div data-aos="fade-up" data-aos-delay="100" class="swiper testimonialSwiper pb-14">
+        <div class="swiper-wrapper">
+
+          <!-- T1 -->
+          <div class="swiper-slide">
+            <div class="glass rounded-3xl p-7 h-full">
+              <div class="flex gap-1 mb-4">
+                <i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i>
+              </div>
+              <p class="text-white/70 text-sm leading-relaxed mb-6">"The AI recipe parser is unreal. I typed 'Mom's aloo paratha with butter and pickle' and it gave me a perfect breakdown. No other app does this."</p>
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center font-bold text-sm">RA</div>
+                <div>
+                  <p class="text-sm font-semibold">Rahul A.</p>
+                  <p class="text-xs text-white/40">Software Engineer, Mumbai</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- T2 -->
+          <div class="swiper-slide">
+            <div class="glass rounded-3xl p-7 h-full">
+              <div class="flex gap-1 mb-4">
+                <i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i>
+              </div>
+              <p class="text-white/70 text-sm leading-relaxed mb-6">"Finally an app that actually tracks fiber. I've been trying to hit 35g/day and the progress bar makes it so satisfying. Clean UI too."</p>
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-rose-600 flex items-center justify-center font-bold text-sm">SK</div>
+                <div>
+                  <p class="text-sm font-semibold">Sara K.</p>
+                  <p class="text-xs text-white/40">Dietitian, Bangalore</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- T3 -->
+          <div class="swiper-slide">
+            <div class="glass rounded-3xl p-7 h-full">
+              <div class="flex gap-1 mb-4">
+                <i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i>
+              </div>
+              <p class="text-white/70 text-sm leading-relaxed mb-6">"Meal templates changed my routine. I bulk-cook on Sundays and now re-applying my prep meals to a new day takes literally 2 taps."</p>
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-600 flex items-center justify-center font-bold text-sm">MJ</div>
+                <div>
+                  <p class="text-sm font-semibold">Marcus J.</p>
+                  <p class="text-xs text-white/40">Personal Trainer, London</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- T4 -->
+          <div class="swiper-slide">
+            <div class="glass rounded-3xl p-7 h-full">
+              <div class="flex gap-1 mb-4">
+                <i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i><i class="ph-fill ph-star text-yellow-400"></i>
+              </div>
+              <p class="text-white/70 text-sm leading-relaxed mb-6">"Been using it for 3 months on a cut. Down 8kg. The history view keeps me accountable — seeing all those green 'Goal ✓' labels is addicting."</p>
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center font-bold text-sm">AP</div>
+                <div>
+                  <p class="text-sm font-semibold">Ananya P.</p>
+                  <p class="text-xs text-white/40">Student, Delhi</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="swiper-pagination"></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       PRICING
+  ══════════════════════════════════════════════════════════ -->
+  <section id="pricing" class="py-28 relative overflow-hidden">
+    <div class="blob w-[400px] h-[400px] bg-primary bottom-0 right-[-100px]"></div>
+
+    <div class="max-w-5xl mx-auto px-6 relative z-10">
+      <div class="text-center mb-16" data-aos="fade-up">
+        <div class="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary-light text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
+          <i class="ph ph-open-source-logo text-sm"></i>
+          Open Source &amp; Free
+        </div>
+        <h2 class="text-4xl md:text-5xl font-black mb-4">100% Free.<br /><span class="grad-text">Forever.</span></h2>
+        <p class="text-white/50 text-lg max-w-lg mx-auto">MacroTracker is open source. Every feature — including AI recipe parsing — is completely free, no strings attached.</p>
+      </div>
+
+      <div class="flex justify-center">
+        <!-- Free — all features included (open source) -->
+        <div data-aos="fade-up" data-aos-delay="0" class="glass rounded-3xl p-8 flex flex-col w-full max-w-md">
+          <div class="mb-6">
+            <p class="text-xs font-semibold text-primary-light uppercase tracking-widest mb-2">Open Source — Free Forever</p>
+            <div class="flex items-end gap-1 mb-3">
+              <span class="text-5xl font-black grad-text">$0</span>
+              <span class="text-white/40 mb-2">/forever</span>
+            </div>
+            <p class="text-white/50 text-sm">Everything, unlocked, for everyone. No account required.</p>
+          </div>
+          <ul class="space-y-3 flex-1 mb-8 text-sm">
+            <li class="flex items-center gap-3 text-white/70"><i class="ph ph-check text-green-400 font-bold"></i>Full macro tracking (5 macros)</li>
+            <li class="flex items-center gap-3 text-white/70"><i class="ph ph-check text-green-400 font-bold"></i>Unlimited meals &amp; food items</li>
+            <li class="flex items-center gap-3 text-white/70"><i class="ph ph-check text-green-400 font-bold"></i>Meal templates (save &amp; reuse)</li>
+            <li class="flex items-center gap-3 text-white/70"><i class="ph ph-check text-green-400 font-bold"></i>Water intake tracker</li>
+            <li class="flex items-center gap-3 text-white/70"><i class="ph ph-check text-green-400 font-bold"></i>Full history log</li>
+            <li class="flex items-center gap-3 text-white/70"><i class="ph ph-check text-green-400 font-bold"></i>AI Recipe Parser (GPT-4o)</li>
+            <li class="flex items-center gap-3 text-white/70"><i class="ph ph-check text-green-400 font-bold"></i>Cloud sync via self-hosted server</li>
+            <li class="flex items-center gap-3 text-white/70"><i class="ph ph-check text-green-400 font-bold"></i>Open source — fork &amp; extend freely</li>
+          </ul>
+          <a href="#download" class="block text-center bg-pill-grad text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-transform">Get Started Free</a>
+        </div>
+
+        <!-- Pro plan commented out — app is open source and free
+        <div data-aos="fade-up" data-aos-delay="120" class="relative rounded-3xl p-px bg-pill-grad shadow-2xl shadow-primary/30">
+          <div class="bg-card rounded-3xl p-8 flex flex-col h-full">
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-pill-grad text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg">MOST POPULAR</div>
+            <div class="mb-6">
+              <p class="text-xs font-semibold text-primary-light uppercase tracking-widest mb-2">Pro</p>
+              <div class="flex items-end gap-1 mb-3">
+                <span class="text-5xl font-black grad-text">$3.99</span>
+                <span class="text-white/40 mb-2">/month</span>
+              </div>
+              <p class="text-white/50 text-sm">For serious athletes and nutrition enthusiasts.</p>
+            </div>
+            <ul class="space-y-3 flex-1 mb-8 text-sm">
+              <li ...>Everything in Free</li>
+              <li ...>Unlimited AI Recipe Parsing</li>
+              <li ...>Cloud sync across devices</li>
+              <li ...>Weekly macro insights</li>
+              <li ...>Multiple goal profiles (cut/bulk/maintain)</li>
+              <li ...>Export history to CSV</li>
+            </ul>
+            <a href="#download" ...>Start 7-Day Free Trial</a>
+          </div>
+        </div>
+        -->
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       DOWNLOAD / CTA
+  ══════════════════════════════════════════════════════════ -->
+  <section id="download" class="py-28 relative overflow-hidden">
+    <div class="blob w-[700px] h-[700px] bg-primary top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20"></div>
+
+    <div class="max-w-3xl mx-auto px-6 text-center relative z-10" data-aos="zoom-in" data-aos-duration="800">
+      <div class="w-20 h-20 rounded-3xl bg-pill-grad flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-primary/50 animate-float">
+        <i class="ph ph-lightning text-white text-4xl"></i>
+      </div>
+      <h2 class="text-4xl md:text-6xl font-black mb-6">
+        Start tracking<br /><span class="grad-text">smarter today.</span>
+      </h2>
+      <p class="text-white/50 text-lg mb-12 max-w-xl mx-auto">
+        Free to download. Takes 60 seconds to set up. Join thousands already hitting their macro goals.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <!-- Google Play -->
+        <a href="https://play.google.com/store/apps/details?id=YOUR_PACKAGE_NAME" target="_blank" rel="noopener noreferrer" class="flex items-center gap-4 bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-white/10 transition-all rounded-2xl px-6 py-4 min-w-[200px] group">
+          <i class="ph ph-google-play-logo text-3xl text-white/70 group-hover:text-white transition-colors"></i>
+          <div class="text-left">
+            <p class="text-[10px] text-white/40 uppercase tracking-wider">Get it on</p>
+            <p class="text-base font-bold">Google Play</p>
+          </div>
+        </a>
+        <!-- App Store -->
+        <a href="#" class="flex items-center gap-4 bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-white/10 transition-all rounded-2xl px-6 py-4 min-w-[200px] group">
+          <i class="ph ph-apple-logo text-3xl text-white/70 group-hover:text-white transition-colors"></i>
+          <div class="text-left">
+            <p class="text-[10px] text-white/40 uppercase tracking-wider">Download on the</p>
+            <p class="text-base font-bold">App Store</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════════════════════ -->
+  <footer class="py-14 border-t border-border">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+        <!-- Brand -->
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-pill-grad flex items-center justify-center">
+            <i class="ph ph-lightning text-white text-sm"></i>
+          </div>
+          <span class="text-lg font-black">Macro<span class="text-primary">Tracker</span></span>
+        </div>
+
+        <!-- Links -->
+        <div class="flex flex-wrap items-center justify-center gap-6 text-sm text-white/40">
+          <a href="#features" class="hover:text-white transition-colors">Features</a>
+          <a href="#" class="hover:text-white transition-colors">Privacy Policy</a>
+          <a href="#" class="hover:text-white transition-colors">Terms</a>
+          <a href="#" class="hover:text-white transition-colors">Contact</a>
+        </div>
+
+        <!-- Social -->
+        <div class="flex items-center gap-3">
+          <a href="#" class="w-9 h-9 glass rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:border-primary/40 transition-all">
+            <i class="ph ph-twitter-logo text-lg"></i>
+          </a>
+          <a href="#" class="w-9 h-9 glass rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:border-primary/40 transition-all">
+            <i class="ph ph-instagram-logo text-lg"></i>
+          </a>
+          <a href="#" class="w-9 h-9 glass rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:border-primary/40 transition-all">
+            <i class="ph ph-github-logo text-lg"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="mt-10 pt-6 border-t border-border/50 text-center text-xs text-white/20">
+        © 2026 MacroTracker. Built with ❤️ and lots of protein. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCRIPTS
+  ══════════════════════════════════════════════════════════ -->
+  <script>
+    // AOS init
+    AOS.init({ once: true, easing: 'ease-out-cubic', offset: 60 });
+
+    // Swiper testimonials
+    new Swiper('.testimonialSwiper', {
+      slidesPerView: 1,
+      spaceBetween: 24,
+      loop: true,
+      autoplay: { delay: 4500, disableOnInteraction: false },
+      pagination: { el: '.swiper-pagination', clickable: true },
+      breakpoints: {
+        768:  { slidesPerView: 2 },
+        1200: { slidesPerView: 3 },
+      },
+    });
+
+    // Sticky nav blur on scroll
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 20) {
+        navbar.classList.add('bg-surface/80', 'backdrop-blur-2xl', 'border-b', 'border-border');
+      } else {
+        navbar.classList.remove('bg-surface/80', 'backdrop-blur-2xl', 'border-b', 'border-border');
+      }
+    });
+
+    // Hamburger
+    document.getElementById('hamburger').addEventListener('click', () => {
+      const menu = document.getElementById('mobile-menu');
+      menu.classList.toggle('hidden');
+    });
+
+    // Close mobile menu on link click
+    document.querySelectorAll('#mobile-menu a').forEach(a => {
+      a.addEventListener('click', () => document.getElementById('mobile-menu').classList.add('hidden'));
+    });
+  </script>
+</body>
+</html>
