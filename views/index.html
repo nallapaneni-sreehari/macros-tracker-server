@@ -910,9 +910,18 @@
       <div class="flex flex-col md:flex-row justify-between items-center gap-8">
         <!-- Brand -->
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-xl bg-pill-grad flex items-center justify-center">
-            <i class="ph ph-lightning text-white text-sm"></i>
-          </div>
+          <svg width="32" height="32" viewBox="100 100 480 480" xmlns="http://www.w3.org/2000/svg" class="rounded-xl shadow-md shadow-primary/30" style="flex-shrink:0">
+            <defs>
+              <linearGradient id="fBg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#13112a"/><stop offset="1" stop-color="#0f0e1a"/></linearGradient>
+              <linearGradient id="fRing" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6C5CE7"/><stop offset="1" stop-color="#a29bfe"/></linearGradient>
+              <linearGradient id="fLeaf" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#a29bfe"/><stop offset="1" stop-color="#6C5CE7"/></linearGradient>
+              <clipPath id="fClip"><rect x="100" y="100" width="480" height="480" rx="108"/></clipPath>
+            </defs>
+            <rect x="100" y="100" width="480" height="480" rx="108" fill="url(#fBg)"/>
+            <circle cx="340" cy="340" r="162" fill="none" stroke="url(#fRing)" stroke-width="22" stroke-linecap="round" stroke-dasharray="818 1018" stroke-dashoffset="-65" transform="rotate(-110 340 340)" clip-path="url(#fClip)"/>
+            <path d="M340 230C310 250 285 285 288 318 291 352 315 378 340 390 365 378 389 352 392 318 395 285 370 250 340 230Z" fill="url(#fLeaf)" clip-path="url(#fClip)"/>
+            <circle cx="446" cy="221" r="18" fill="#e17055" clip-path="url(#fClip)"/>
+          </svg>
           <span class="text-lg font-black">Macro<span class="text-primary">Tracker</span></span>
         </div>
 
