@@ -7,6 +7,7 @@ RUN npm ci --omit=dev
 
 COPY server.js ./
 COPY views/ ./views/
+COPY templates/ ./templates/
 
 EXPOSE 2727
 
