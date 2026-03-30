@@ -142,7 +142,7 @@
 
     /* ── Theme toggle ── */
     .theme-toggle {
-      position:relative; width:44px; height:24px;
+      position:relative; width:44px; height:30px;
       background:rgba(108,92,231,0.18); border:1px solid rgba(108,92,231,0.28);
       border-radius:999px; cursor:pointer; transition:background .3s,border-color .3s;
       flex-shrink:0;
@@ -150,13 +150,13 @@
     html.light .theme-toggle { background:rgba(108,92,231,0.12); border-color:rgba(108,92,231,0.2); }
     .theme-toggle-knob {
       position:absolute; top:3px; left:3px;
-      width:16px; height:16px; border-radius:50%;
+      width:22px; height:22px; border-radius:50%;
       background:linear-gradient(135deg,#6C5CE7,#a29bfe);
       transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .3s;
       display:flex; align-items:center; justify-content:center;
     }
     html.light .theme-toggle-knob {
-      transform:translateX(20px);
+      transform:translateX(16px);
       background:linear-gradient(135deg,#f9a825,#fb8c00);
     }
     .theme-toggle-knob i { font-size:9px; color:#fff; pointer-events:none; }
@@ -340,86 +340,153 @@
             <div class="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-surface rounded-full z-10"></div>
 
             <!-- Screen content -->
-            <div class="dark-zone absolute inset-0 p-5 pt-14">
-              <!-- Header -->
-              <p class="text-xs text-white/40 mb-1">Good morning, Alex 👋</p>
-              <h3 class="text-lg font-bold mb-4">Today's Summary</h3>
+            <div class="dark-zone absolute inset-0 p-4 pt-12 overflow-hidden">
 
-              <!-- Macro cards -->
-              <div class="grid grid-cols-2 gap-2 mb-4">
-                <div class="glass rounded-2xl p-3">
-                  <p class="text-[10px] text-white/40 mb-1">Calories</p>
-                  <p class="text-xl font-black text-white">1,640</p>
-                  <p class="text-[10px] text-white/40">/ 2,000 kcal</p>
-                  <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-red-400 to-orange-400 rounded-full bar-fill" style="width:82%"></div>
-                  </div>
+              <!-- Header row -->
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <p class="text-[10px] text-white/40">Good morning, Alex 👋</p>
+                  <p class="text-sm font-black text-white">Today's Macros</p>
                 </div>
-                <div class="glass rounded-2xl p-3">
-                  <p class="text-[10px] text-white/40 mb-1">Protein</p>
-                  <p class="text-xl font-black text-white">118g</p>
-                  <p class="text-[10px] text-white/40">/ 150g</p>
-                  <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full bar-fill" style="width:79%;animation-delay:.2s;"></div>
-                  </div>
-                </div>
-                <div class="glass rounded-2xl p-3">
-                  <p class="text-[10px] text-white/40 mb-1">Carbs</p>
-                  <p class="text-xl font-black text-white">195g</p>
-                  <p class="text-[10px] text-white/40">/ 250g</p>
-                  <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full bar-fill" style="width:78%;animation-delay:.4s;"></div>
-                  </div>
-                </div>
-                <div class="glass rounded-2xl p-3">
-                  <p class="text-[10px] text-white/40 mb-1">Fat</p>
-                  <p class="text-xl font-black text-white">52g</p>
-                  <p class="text-[10px] text-white/40">/ 65g</p>
-                  <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-purple-400 to-violet-400 rounded-full bar-fill" style="width:80%;animation-delay:.6s;"></div>
+                <span class="flex items-center gap-1 text-[9px] font-bold bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
+                  <i class="ph ph-check-circle text-[10px]"></i> On Track
+                </span>
+              </div>
+
+              <!-- Calorie ring -->
+              <div class="flex justify-center mb-3">
+                <div class="relative w-[90px] h-[90px]">
+                  <svg viewBox="0 0 90 90" class="w-full h-full" style="transform:rotate(-90deg)">
+                    <defs>
+                      <linearGradient id="mockRing" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#e17055"/>
+                        <stop offset="100%" stop-color="#fdcb6e"/>
+                      </linearGradient>
+                    </defs>
+                    <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="7" stroke-linecap="round"/>
+                    <circle cx="45" cy="45" r="38" fill="none" stroke="url(#mockRing)" stroke-width="7" stroke-linecap="round"
+                      stroke-dasharray="239 239" stroke-dashoffset="43" class="bar-fill"/>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <p class="text-base font-black text-white leading-none">1,640</p>
+                    <p class="text-[8px] text-white/40 uppercase tracking-wide">kcal</p>
+                    <p class="text-[8px] text-orange-400 font-bold">360 left</p>
                   </div>
                 </div>
               </div>
 
-              <!-- Water -->
-              <div class="glass rounded-2xl p-3 flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2">
-                  <i class="ph-fill ph-drop text-blue-400 text-lg"></i>
-                  <div>
-                    <p class="text-xs font-semibold">Water</p>
-                    <p class="text-[10px] text-white/40">1.75 / 3.0 L</p>
+              <!-- 2×2 Macro tiles -->
+              <div class="grid grid-cols-2 gap-1.5 mb-3">
+
+                <!-- Protein -->
+                <div class="rounded-xl p-2" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)">
+                  <div class="flex items-center gap-1.5 mb-1.5">
+                    <span class="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#00b894,#00cec9)">
+                      <i class="ph ph-fish text-white" style="font-size:9px"></i>
+                    </span>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-[8px] text-white/40 uppercase tracking-wide leading-none">Protein</p>
+                      <p class="text-[10px] font-black text-white leading-none">118g<span class="text-white/30 font-normal">/150g</span></p>
+                    </div>
+                    <span class="text-[8px] font-bold px-1 py-0.5 rounded" style="background:rgba(0,184,148,0.2);color:#00b894">79%</span>
+                  </div>
+                  <div class="h-1 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.08)">
+                    <div class="h-full rounded-full bar-fill" style="width:79%;background:linear-gradient(90deg,#00b894,#00cec9);animation-delay:.1s"></div>
                   </div>
                 </div>
-                <div class="flex gap-1">
-                  <div class="w-4 h-6 rounded-sm bg-blue-500 opacity-100"></div>
-                  <div class="w-4 h-6 rounded-sm bg-blue-500 opacity-100"></div>
-                  <div class="w-4 h-6 rounded-sm bg-blue-500 opacity-60"></div>
-                  <div class="w-4 h-6 rounded-sm bg-white/10"></div>
-                  <div class="w-4 h-6 rounded-sm bg-white/10"></div>
+
+                <!-- Carbs -->
+                <div class="rounded-xl p-2" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)">
+                  <div class="flex items-center gap-1.5 mb-1.5">
+                    <span class="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#fdcb6e,#e17055)">
+                      <i class="ph ph-bread text-white" style="font-size:9px"></i>
+                    </span>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-[8px] text-white/40 uppercase tracking-wide leading-none">Carbs</p>
+                      <p class="text-[10px] font-black text-white leading-none">195g<span class="text-white/30 font-normal">/250g</span></p>
+                    </div>
+                    <span class="text-[8px] font-bold px-1 py-0.5 rounded" style="background:rgba(253,203,110,0.2);color:#c5880a">78%</span>
+                  </div>
+                  <div class="h-1 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.08)">
+                    <div class="h-full rounded-full bar-fill" style="width:78%;background:linear-gradient(90deg,#fdcb6e,#e17055);animation-delay:.2s"></div>
+                  </div>
+                </div>
+
+                <!-- Fat -->
+                <div class="rounded-xl p-2" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)">
+                  <div class="flex items-center gap-1.5 mb-1.5">
+                    <span class="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#a29bfe,#6c5ce7)">
+                      <i class="ph ph-drop text-white" style="font-size:9px"></i>
+                    </span>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-[8px] text-white/40 uppercase tracking-wide leading-none">Fat</p>
+                      <p class="text-[10px] font-black text-white leading-none">52g<span class="text-white/30 font-normal">/65g</span></p>
+                    </div>
+                    <span class="text-[8px] font-bold px-1 py-0.5 rounded" style="background:rgba(108,92,231,0.2);color:#a29bfe">80%</span>
+                  </div>
+                  <div class="h-1 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.08)">
+                    <div class="h-full rounded-full bar-fill" style="width:80%;background:linear-gradient(90deg,#a29bfe,#6c5ce7);animation-delay:.3s"></div>
+                  </div>
+                </div>
+
+                <!-- Fiber -->
+                <div class="rounded-xl p-2" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)">
+                  <div class="flex items-center gap-1.5 mb-1.5">
+                    <span class="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#55efc4,#00b894)">
+                      <i class="ph ph-leaf text-white" style="font-size:9px"></i>
+                    </span>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-[8px] text-white/40 uppercase tracking-wide leading-none">Fiber</p>
+                      <p class="text-[10px] font-black text-white leading-none">18g<span class="text-white/30 font-normal">/30g</span></p>
+                    </div>
+                    <span class="text-[8px] font-bold px-1 py-0.5 rounded" style="background:rgba(85,239,196,0.2);color:#00a381">60%</span>
+                  </div>
+                  <div class="h-1 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.08)">
+                    <div class="h-full rounded-full bar-fill" style="width:60%;background:linear-gradient(90deg,#55efc4,#00b894);animation-delay:.4s"></div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Water -->
+              <div class="flex items-center justify-between rounded-xl px-3 py-2 mb-3" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)">
+                <div class="flex items-center gap-2">
+                  <i class="ph-fill ph-drop text-blue-400" style="font-size:14px"></i>
+                  <div>
+                    <p class="text-[10px] font-semibold text-white">Water</p>
+                    <p class="text-[8px] text-white/40">1.75 / 3.0 L</p>
+                  </div>
+                </div>
+                <div class="flex gap-0.5">
+                  <div class="w-3 h-5 rounded-sm bg-blue-500"></div>
+                  <div class="w-3 h-5 rounded-sm bg-blue-500"></div>
+                  <div class="w-3 h-5 rounded-sm bg-blue-500 opacity-50"></div>
+                  <div class="w-3 h-5 rounded-sm" style="background:rgba(255,255,255,0.1)"></div>
+                  <div class="w-3 h-5 rounded-sm" style="background:rgba(255,255,255,0.1)"></div>
                 </div>
               </div>
 
               <!-- Meals -->
-              <div class="space-y-2">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <i class="ph ph-sun text-primary text-xs"></i>
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-2 rounded-xl px-2.5 py-1.5" style="background:rgba(255,255,255,0.04)">
+                  <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(108,92,231,0.25)">
+                    <i class="ph ph-sun text-primary" style="font-size:10px"></i>
                   </div>
                   <div class="flex-1">
-                    <p class="text-xs font-semibold">Breakfast</p>
-                    <p class="text-[10px] text-white/40">480 cal</p>
+                    <p class="text-[10px] font-semibold text-white">Breakfast</p>
+                    <p class="text-[8px] text-white/40">480 cal</p>
                   </div>
-                  <i class="ph ph-check-circle text-green-400 text-sm"></i>
+                  <i class="ph ph-check-circle text-green-400" style="font-size:12px"></i>
                 </div>
-                <div class="flex items-center gap-2.5">
-                  <div class="w-7 h-7 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                    <i class="ph ph-fork-knife text-orange-400 text-xs"></i>
+                <div class="flex items-center gap-2 rounded-xl px-2.5 py-1.5" style="background:rgba(255,255,255,0.04)">
+                  <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(225,112,85,0.25)">
+                    <i class="ph ph-fork-knife text-orange-400" style="font-size:10px"></i>
                   </div>
                   <div class="flex-1">
-                    <p class="text-xs font-semibold">Lunch</p>
-                    <p class="text-[10px] text-white/40">620 cal</p>
+                    <p class="text-[10px] font-semibold text-white">Lunch</p>
+                    <p class="text-[8px] text-white/40">620 cal</p>
                   </div>
-                  <i class="ph ph-check-circle text-green-400 text-sm"></i>
+                  <i class="ph ph-check-circle text-green-400" style="font-size:12px"></i>
                 </div>
               </div>
             </div>
@@ -429,7 +496,7 @@
           </div>
 
           <!-- Floating badges -->
-          <div class="absolute -left-14 top-20 glass rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-xl">
+          <div class="absolute -left-14 top-[6rem] glass rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-xl">
             <div class="w-8 h-8 rounded-xl bg-green-500/20 flex items-center justify-center">
               <i class="ph ph-lightning text-green-400 text-sm"></i>
             </div>
@@ -439,7 +506,7 @@
             </div>
           </div>
 
-          <div class="absolute -right-14 bottom-28 glass rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-xl">
+          <div class="absolute -right-14 bottom-[10rem] glass rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-xl">
             <div class="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center">
               <i class="ph ph-brain text-primary-light text-sm"></i>
             </div>
@@ -577,7 +644,7 @@
           <div class="absolute inset-0 bg-hero-grad opacity-60 pointer-events-none"></div>
           <div class="relative z-10 flex flex-col md:flex-row gap-6 items-start md:items-center">
             <div class="w-14 h-14 rounded-2xl bg-pill-grad flex items-center justify-center flex-shrink-0 shadow-xl shadow-primary/40 group-hover:scale-110 transition-transform">
-              <i class="ph ph-sparkles text-white text-2xl"></i>
+              <i class="ph ph-sparkle text-white text-2xl"></i>
             </div>
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-2">
@@ -819,7 +886,7 @@
             <div class="flex items-center justify-between px-5 py-4 border-b border-white/10">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-pill-grad flex items-center justify-center shadow-lg shadow-primary/40">
-                  <i class="ph ph-sparkles text-white text-lg"></i>
+                  <i class="ph ph-sparkle text-white text-lg"></i>
                 </div>
                 <div>
                   <p class="text-sm font-bold text-white">Milo</p>
@@ -838,7 +905,7 @@
               <!-- Milo greeting -->
               <div class="flex items-start gap-3">
                 <div class="w-7 h-7 rounded-lg bg-primary/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="ph ph-sparkles text-primary-light text-xs"></i>
+                  <i class="ph ph-sparkle text-primary-light text-xs"></i>
                 </div>
                 <div class="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%]">
                   <p class="text-xs text-white/80 leading-relaxed">Hey Alex! 👋 You've had a solid day — 1,640 kcal logged. How can I help?</p>
@@ -855,7 +922,7 @@
               <!-- Milo response -->
               <div class="flex items-start gap-3">
                 <div class="w-7 h-7 rounded-lg bg-primary/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="ph ph-sparkles text-primary-light text-xs"></i>
+                  <i class="ph ph-sparkle text-primary-light text-xs"></i>
                 </div>
                 <div class="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]">
                   <p class="text-xs text-white/80 leading-relaxed mb-2">You're at <span class="text-green-400 font-semibold">118g / 150g</span> — 79% there! 💪 You need <span class="font-semibold text-white">32g more</span>. Any of these would finish it off:</p>
@@ -877,7 +944,7 @@
               <!-- Milo response 2 -->
               <div class="flex items-start gap-3">
                 <div class="w-7 h-7 rounded-lg bg-primary/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="ph ph-sparkles text-primary-light text-xs"></i>
+                  <i class="ph ph-sparkle text-primary-light text-xs"></i>
                 </div>
                 <div class="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]">
                   <p class="text-xs text-white/80 leading-relaxed">Based on your profile, your TDEE is approx. <span class="text-orange-400 font-semibold">2,650 kcal/day</span>. At your 2,000 kcal goal you're in a healthy <span class="font-semibold text-white">~650 cal deficit</span> — right on track for steady fat loss. 🔥</p>
@@ -897,7 +964,7 @@
 
           <!-- Access hint -->
           <p class="text-center text-xs text-white/30 mt-4 flex items-center justify-center gap-1.5">
-            <i class="ph ph-sparkles text-primary-light"></i>
+            <i class="ph ph-sparkle text-primary-light"></i>
             Tap the <span class="text-primary-light font-semibold">✦ FAB button</span> on the home screen to open Milo
           </p>
         </div>
@@ -1018,7 +1085,7 @@
 
       <div class="flex justify-center">
         <!-- Free — all features included (open source) -->
-        <div data-aos="fade-up" data-aos-delay="0" class="glass rounded-3xl p-8 flex flex-col w-full max-w-md">
+        <div data-aos="fade-up" data-aos-delay="0" class="glass rounded-3xl p-8 flex flex-col w-full max-w-3xl">
           <div class="mb-6">
             <p class="text-xs font-semibold text-primary-light uppercase tracking-widest mb-2">Open Source — Free Forever</p>
             <div class="flex items-end gap-1 mb-3">
