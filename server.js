@@ -15,6 +15,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DB_NAME = 'macro_tracker';
 const COLLECTION = 'kv_store';
 const OTP_COLLECTION = 'otp_store';
+const CHAT_COLLECTION = 'chat_store';
 
 // Nodemailer transporter (lazy)
 let _transporter;
@@ -43,6 +44,8 @@ async function connectDB() {
   await db.collection(COLLECTION).createIndex({ key: 1 }, { unique: true });
   // TTL index: MongoDB auto-deletes expired OTPs
   await db.collection(OTP_COLLECTION).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  // Index for fast per-user conversation lookups
+  await db.collection(CHAT_COLLECTION).createIndex({ userId: 1 }, { unique: true });
   console.log('Connected to MongoDB');
 }
 
@@ -165,6 +168,142 @@ app.post('/api/ai/parse-recipe', async (req, res) => {
     const items = JSON.parse(jsonStr);
 
     res.json({ items });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/ai/chat — Milo nutrition assistant (context-aware, persistent memory)
+app.post('/api/ai/chat', async (req, res) => {
+  try {
+    const { userId, message, context } = req.body;
+    if (!userId || !message?.trim()) {
+      return res.status(400).json({ error: 'userId and message are required' });
+    }
+
+    // Load stored conversation history (last 20 messages for context window)
+    const convDoc = await db.collection(CHAT_COLLECTION).findOne(
+      { userId },
+      { projection: { messages: { $slice: -20 }, _id: 0 } },
+    );
+    const history = convDoc?.messages || [];
+
+    // Build a rich system prompt using the user's profile, goals, and today's log
+    const profile = context?.profile || {};
+    const goals = context?.goals || {};
+    const todayLog = context?.todayLog || {};
+
+    const profileLines = [];
+    if (profile.name) profileLines.push(`Name: ${profile.name}`);
+    if (profile.age) profileLines.push(`Age: ${profile.age}`);
+    if (profile.gender) profileLines.push(`Gender: ${profile.gender}`);
+    if (profile.weight && profile.weightUnit) profileLines.push(`Weight: ${profile.weight} ${profile.weightUnit}`);
+    if (profile.height && profile.heightUnit) profileLines.push(`Height: ${profile.height} ${profile.heightUnit}`);
+    if (profile.activityLevel) profileLines.push(`Activity level: ${profile.activityLevel}`);
+
+    const goalLines = [];
+    if (goals.calories) goalLines.push(`Calorie goal: ${goals.calories} kcal`);
+    if (goals.protein) goalLines.push(`Protein goal: ${goals.protein}g`);
+    if (goals.carbs) goalLines.push(`Carbs goal: ${goals.carbs}g`);
+    if (goals.fat) goalLines.push(`Fat goal: ${goals.fat}g`);
+    if (goals.fiber) goalLines.push(`Fiber goal: ${goals.fiber}g`);
+
+    const logLines = [];
+    if (todayLog.meals?.length) {
+      const totalCals = todayLog.meals.reduce((sum, m) =>
+        sum + m.items.reduce((s, i) => s + (i.macros?.calories || 0), 0), 0);
+      const totalProtein = todayLog.meals.reduce((sum, m) =>
+        sum + m.items.reduce((s, i) => s + (i.macros?.protein || 0), 0), 0);
+      logLines.push(`Calories logged today: ${Math.round(totalCals)} kcal`);
+      logLines.push(`Protein logged today: ${Math.round(totalProtein)}g`);
+      logLines.push(`Meals logged: ${todayLog.meals.map(m => m.name).join(', ')}`);
+    }
+    if (todayLog.waterIntake) logLines.push(`Water today: ${todayLog.waterIntake}L`);
+
+    const systemPrompt = `You are Milo, a friendly and knowledgeable AI nutrition and fitness assistant built into the MacroTracker app. Your goal is to help users understand their nutrition, fitness progress, and health metrics in a clear and motivating way.
+
+    ${profileLines.length ? `User profile:\n${profileLines.join('\n')}` : ''}
+    ${goalLines.length ? `\nUser goals:\n${goalLines.join('\n')}` : ''}
+    ${logLines.length ? `\nToday's data:\n${logLines.join('\n')}` : ''}
+
+    Guidelines:
+    - Be conversational, warm, and encouraging
+    - Give personalized answers based on the user's profile and data above
+    - Calculate BMI, TDEE, macro ratios, and other metrics on request using the provided data
+    - If profile data is missing for a calculation, politely ask for it
+    - Keep responses concise (2-4 sentences) unless a detailed explanation is needed
+    - Use numbers and specifics wherever possible
+    - Never give medical diagnoses — always recommend consulting a healthcare professional for medical concerns`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.7,
+        max_tokens: 400,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...history,
+          { role: 'user', content: message.trim() },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      return res.status(502).json({ error: 'OpenAI API error', details: err });
+    }
+
+    const data = await response.json();
+    const reply = data.choices[0].message.content.trim();
+
+    // Append new turn to the user's conversation (cap at 100 messages)
+    await db.collection(CHAT_COLLECTION).updateOne(
+      { userId },
+      {
+        $push: {
+          messages: {
+            $each: [
+              { role: 'user', content: message.trim() },
+              { role: 'assistant', content: reply },
+            ],
+            $slice: -100,
+          },
+        },
+        $set: { updatedAt: new Date() },
+        $setOnInsert: { createdAt: new Date() },
+      },
+      { upsert: true },
+    );
+
+    res.json({ reply });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/conversations/:userId — retrieve stored messages to restore chat UI
+app.get('/api/conversations/:userId', async (req, res) => {
+  try {
+    const doc = await db.collection(CHAT_COLLECTION).findOne(
+      { userId: req.params.userId },
+      { projection: { messages: 1, _id: 0 } },
+    );
+    res.json({ messages: doc?.messages || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/conversations/:userId — clear conversation history
+app.delete('/api/conversations/:userId', async (req, res) => {
+  try {
+    await db.collection(CHAT_COLLECTION).deleteOne({ userId: req.params.userId });
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
