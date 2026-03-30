@@ -160,6 +160,27 @@
       background:linear-gradient(135deg,#f9a825,#fb8c00);
     }
     .theme-toggle-knob i { font-size:9px; color:#fff; pointer-events:none; }
+
+    /* Nav glass bg in light mode when scrolled */
+    html.light #navbar.backdrop-blur-2xl {
+      background: rgba(244,243,255,0.92) !important;
+      border-color: rgba(108,92,231,0.15) !important;
+    }
+
+    /* Fix text-white/80 (used on secondary CTA) in light mode */
+    html.light .text-white\/80 { color: rgba(26,25,40,0.72) !important; }
+
+    /* Dark zone — keeps phone mockup screen always dark regardless of theme */
+    .dark-zone { background: linear-gradient(to bottom, #1a1928, #0f0e1a); color: #e2e0ff; }
+    html.light .dark-zone .glass {
+      background: rgba(26,25,40,0.7) !important;
+      border-color: rgba(108,92,231,0.18) !important;
+    }
+    html.light .dark-zone .text-white\/40 { color: rgba(255,255,255,0.4) !important; }
+    html.light .dark-zone .text-white\/20 { color: rgba(255,255,255,0.2) !important; }
+    html.light .dark-zone p, html.light .dark-zone h3, html.light .dark-zone span,
+    html.light .dark-zone .font-semibold, html.light .dark-zone .font-black,
+    html.light .dark-zone .font-bold { color: inherit; }
   </style>
 </head>
 <body class="relative overflow-x-hidden">
@@ -317,7 +338,7 @@
             <div class="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-surface rounded-full z-10"></div>
 
             <!-- Screen content -->
-            <div class="absolute inset-0 bg-gradient-to-b from-[#1a1928] to-[#0f0e1a] p-5 pt-14">
+            <div class="dark-zone absolute inset-0 p-5 pt-14">
               <!-- Header -->
               <p class="text-xs text-white/40 mb-1">Good morning, Alex 👋</p>
               <h3 class="text-lg font-bold mb-4">Today's Summary</h3>
