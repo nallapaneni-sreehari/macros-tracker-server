@@ -114,6 +114,51 @@
     .blob {
       position:absolute; border-radius:50%; filter:blur(80px); pointer-events:none; opacity:0.25;
     }
+
+    /* ── Light theme ── */
+    html.light body { background-color: #f4f3ff; color: #1a1928; }
+    html.light .glass {
+      background: rgba(255,255,255,0.80);
+      border-color: rgba(108,92,231,0.15);
+    }
+    html.light ::-webkit-scrollbar-track { background: #f4f3ff; }
+    html.light .border-border { border-color: #dddaf7; }
+    html.light .border-border\/50 { border-color: rgba(221,218,247,0.5); }
+    html.light .border-border\/40 { border-color: rgba(221,218,247,0.4); }
+    html.light .bg-white\/5 { background: rgba(108,92,231,0.06) !important; }
+    html.light .bg-white\/10 { background: rgba(108,92,231,0.1) !important; }
+    html.light .border-white\/10 { border-color: rgba(108,92,231,0.15) !important; }
+    html.light .text-white\/70 { color: rgba(26,25,40,0.65) !important; }
+    html.light .text-white\/60 { color: rgba(26,25,40,0.58) !important; }
+    html.light .text-white\/55 { color: rgba(26,25,40,0.55) !important; }
+    html.light .text-white\/50 { color: rgba(26,25,40,0.5) !important; }
+    html.light .text-white\/40 { color: rgba(26,25,40,0.42) !important; }
+    html.light .text-white\/20 { color: rgba(26,25,40,0.25) !important; }
+    html.light #navbar { --tw-bg-opacity:1; }
+    html.light #navbar.scrolled { background: rgba(244,243,255,0.88) !important; }
+    html.light .bg-surface { background-color: #f4f3ff !important; }
+    html.light .bg-card, html.light [class*="bg-card"] { background-color: #ffffff !important; }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position:relative; width:44px; height:24px;
+      background:rgba(108,92,231,0.18); border:1px solid rgba(108,92,231,0.28);
+      border-radius:999px; cursor:pointer; transition:background .3s,border-color .3s;
+      flex-shrink:0;
+    }
+    html.light .theme-toggle { background:rgba(108,92,231,0.12); border-color:rgba(108,92,231,0.2); }
+    .theme-toggle-knob {
+      position:absolute; top:3px; left:3px;
+      width:16px; height:16px; border-radius:50%;
+      background:linear-gradient(135deg,#6C5CE7,#a29bfe);
+      transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .3s;
+      display:flex; align-items:center; justify-content:center;
+    }
+    html.light .theme-toggle-knob {
+      transform:translateX(20px);
+      background:linear-gradient(135deg,#f9a825,#fb8c00);
+    }
+    .theme-toggle-knob i { font-size:9px; color:#fff; pointer-events:none; }
   </style>
 </head>
 <body class="relative overflow-x-hidden">
@@ -139,11 +184,18 @@
         <a href="#testimonials" class="nav-link hover:text-white transition-colors">Reviews</a>
       </div>
 
-      <!-- CTA -->
-      <a href="#download" class="hidden md:inline-flex items-center gap-2 bg-pill-grad text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-transform">
-        <i class="ph ph-device-mobile-camera"></i>
-        Get the App
-      </a>
+      <!-- CTA + Theme toggle -->
+      <div class="hidden md:flex items-center gap-3">
+        <button id="theme-toggle" onclick="toggleTheme()" class="theme-toggle" aria-label="Toggle theme">
+          <span class="theme-toggle-knob">
+            <i class="ph ph-moon" id="theme-icon"></i>
+          </span>
+        </button>
+        <a href="#download" class="inline-flex items-center gap-2 bg-pill-grad text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-transform">
+          <i class="ph ph-device-mobile-camera"></i>
+          Get the App
+        </a>
+      </div>
 
       <!-- Mobile hamburger -->
       <button id="hamburger" class="md:hidden text-white/70 hover:text-white">
@@ -915,6 +967,22 @@
         toast.classList.remove('opacity-100', 'translate-y-0');
       }, 3000);
     }
+
+    // Theme switcher
+    function toggleTheme() {
+      const isLight = document.documentElement.classList.toggle('light');
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      document.getElementById('theme-icon').className = isLight ? 'ph ph-sun' : 'ph ph-moon';
+    }
+
+    // Restore saved theme preference on load
+    (function () {
+      if (localStorage.getItem('theme') === 'light') {
+        document.documentElement.classList.add('light');
+        const icon = document.getElementById('theme-icon');
+        if (icon) icon.className = 'ph ph-sun';
+      }
+    })();
   </script>
 </body>
 </html>
