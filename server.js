@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { MongoClient } = require('mongodb');
+const nodemailer = require('nodemailer');
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const app = express();
@@ -12,6 +13,25 @@ const MONGO_URI = process.env.MONGO_URI;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DB_NAME = 'macro_tracker';
 const COLLECTION = 'kv_store';
+const OTP_COLLECTION = 'otp_store';
+
+// Nodemailer transporter (lazy)
+let _transporter;
+function getTransporter() {
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: parseInt(process.env.SMTP_PORT || '587') === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    });
+  }
+  return _transporter;
+}
+
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 let db;
 
@@ -20,12 +40,92 @@ async function connectDB() {
   await client.connect();
   db = client.db(DB_NAME);
   await db.collection(COLLECTION).createIndex({ key: 1 }, { unique: true });
+  // TTL index: MongoDB auto-deletes expired OTPs
+  await db.collection(OTP_COLLECTION).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   console.log('Connected to MongoDB');
 }
+
+// Serve static assets from views/ (logo, images, etc.)
+app.use(express.static(path.join(__dirname, 'views')));
 
 // GET / — serve landing page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views/index.html'));
+});
+
+// POST /api/auth/send-otp — generate & email a 6-digit OTP
+app.post('/api/auth/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Valid email required' });
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Rate-limit: block repeated requests within 60 seconds
+    const recent = await db.collection(OTP_COLLECTION).findOne({
+      email: normalizedEmail,
+      createdAt: { $gt: new Date(Date.now() - 60 * 1000) },
+    });
+    if (recent) {
+      return res.status(429).json({ error: 'Please wait a moment before requesting another OTP.' });
+    }
+
+    const otp = generateOtp();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await db.collection(OTP_COLLECTION).updateOne(
+      { email: normalizedEmail },
+      { $set: { email: normalizedEmail, otp, expiresAt, createdAt: new Date() } },
+      { upsert: true }
+    );
+
+    await getTransporter().sendMail({
+      from: `"MacroTracker" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+      to: normalizedEmail,
+      subject: 'Your MacroTracker login code',
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0f0e1a;color:#e2e0ff;border-radius:16px;">
+          <h2 style="color:#a29bfe;margin:0 0 8px">MacroTracker</h2>
+          <p style="color:rgba(226,224,255,0.6);margin:0 0 24px">Your one-time login code:</p>
+          <div style="font-size:44px;font-weight:900;letter-spacing:14px;color:#6C5CE7;text-align:center;padding:20px;background:rgba(108,92,231,0.12);border-radius:12px;margin-bottom:24px;">${otp}</div>
+          <p style="color:rgba(226,224,255,0.4);font-size:13px;margin:0">Expires in 10 minutes. Never share this code.</p>
+        </div>
+      `,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/auth/verify-otp — verify and consume the OTP
+app.post('/api/auth/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'Email and OTP are required' });
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+    const record = await db.collection(OTP_COLLECTION).findOne({ email: normalizedEmail });
+
+    if (!record) {
+      return res.status(400).json({ error: 'No OTP found. Please request a new one.' });
+    }
+    if (new Date() > record.expiresAt) {
+      await db.collection(OTP_COLLECTION).deleteOne({ email: normalizedEmail });
+      return res.status(400).json({ error: 'OTP expired. Please request a new one.' });
+    }
+    if (record.otp !== otp.trim()) {
+      return res.status(400).json({ error: 'Incorrect OTP. Please try again.' });
+    }
+
+    await db.collection(OTP_COLLECTION).deleteOne({ email: normalizedEmail });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST /api/ai/parse-recipe — parse recipe text into food items with macros
