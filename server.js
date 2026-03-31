@@ -10,6 +10,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ── Request logger ──
+app.use((req, res, next) => {
+  const start = Date.now();
+  const { method, url, body } = req;
+
+  // Mask sensitive fields before logging
+  const safeBody = body && Object.keys(body).length
+    ? JSON.stringify({ ...body, otp: body.otp ? '***' : undefined, email: body.email ? body.email.replace(/(?<=.{3}).(?=.*@)/g, '*') : undefined })
+    : '';
+
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    const level = res.statusCode >= 500 ? 'ERROR' : res.statusCode >= 400 ? 'WARN' : 'INFO';
+    console.log(`[${level}] ${method} ${url} → ${res.statusCode} (${ms}ms)${safeBody ? ' body=' + safeBody : ''}`);
+  });
+  next();
+});
+
 const MONGO_URI = process.env.MONGO_URI;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DB_NAME = 'macro_tracker';
@@ -77,6 +95,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
       createdAt: { $gt: new Date(Date.now() - 60 * 1000) },
     });
     if (recent) {
+      console.log(`[AUTH] send-otp blocked (rate-limit) for ${normalizedEmail}`);
       return res.status(429).json({ error: 'Please wait a moment before requesting another OTP.' });
     }
 
@@ -95,9 +114,10 @@ app.post('/api/auth/send-otp', async (req, res) => {
       subject: 'Your MacroTracker login code',
       html: getOtpTemplate(otp),
     });
-
+    console.log(`[AUTH] OTP sent to ${normalizedEmail}`);
     res.json({ success: true });
   } catch (err) {
+    console.error('[AUTH] send-otp error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -124,8 +144,10 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     }
 
     await db.collection(OTP_COLLECTION).deleteOne({ email: normalizedEmail });
+    console.log(`[AUTH] OTP verified for ${normalizedEmail}`);
     res.json({ success: true });
   } catch (err) {
+    console.error('[AUTH] verify-otp error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -319,8 +341,11 @@ app.get('/api/storage/:userId/:key', async (req, res) => {
   try {
     const compositeKey = `${req.params.userId}:${req.params.key}`;
     const doc = await db.collection(COLLECTION).findOne({ key: compositeKey });
+    const found = doc && doc.value !== null && doc.value !== undefined;
+    console.log(`[STORAGE] GET ${compositeKey} → ${found ? 'hit' : 'miss'}`);
     res.json({ value: doc ? doc.value : null });
   } catch (err) {
+    console.error(`[STORAGE] GET error for ${req.params.userId}:${req.params.key}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -334,8 +359,10 @@ app.put('/api/storage/:userId/:key', async (req, res) => {
       { $set: { key: compositeKey, userId: req.params.userId, value: req.body.value } },
       { upsert: true }
     );
+    console.log(`[STORAGE] PUT ${compositeKey} → ok`);
     res.json({ success: true });
   } catch (err) {
+    console.error(`[STORAGE] PUT error for ${req.params.userId}:${req.params.key}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -345,8 +372,10 @@ app.delete('/api/storage/:userId/:key', async (req, res) => {
   try {
     const compositeKey = `${req.params.userId}:${req.params.key}`;
     await db.collection(COLLECTION).deleteOne({ key: compositeKey });
+    console.log(`[STORAGE] DELETE ${compositeKey} → ok`);
     res.json({ success: true });
   } catch (err) {
+    console.error(`[STORAGE] DELETE error for ${req.params.userId}:${req.params.key}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
