@@ -57,6 +57,11 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views/index.html'));
 });
 
+// GET /privacy — serve privacy policy
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views/privacy.html'));
+});
+
 // POST /api/auth/send-otp — generate & email a 6-digit OTP
 app.post('/api/auth/send-otp', async (req, res) => {
   try {
