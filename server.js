@@ -70,6 +70,9 @@ async function connectDB() {
 // Serve static assets from views/ (logo, images, etc.)
 app.use(express.static(path.join(__dirname, 'views')));
 
+// Serve Angular app at /web-app (all static assets under /web-app/*)
+app.use('/web-app', express.static(path.join(__dirname, 'www')));
+
 // GET / — serve landing page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views/index.html'));
@@ -78,6 +81,11 @@ app.get('/', (req, res) => {
 // GET /privacy — serve privacy policy
 app.get('/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'views/privacy.html'));
+});
+
+// GET /web-app/* — catch-all for Angular deep links (client-side routing)
+app.get('/web-app/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'www/index.html'));
 });
 
 // POST /api/auth/send-otp — generate & email a 6-digit OTP
