@@ -9,7 +9,7 @@ services:
   api:
     build:
       context: ..
-      dockerfile: server/Dockerfile
+      dockerfile: macros-tracker-server/Dockerfile
     container_name: macro-tracker-api
     restart: unless-stopped
     ports:
