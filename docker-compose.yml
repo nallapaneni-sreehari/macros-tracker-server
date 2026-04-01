@@ -9,6 +9,7 @@ services:
   api:
     image: r151149/macro-tracker:latest
     container_name: macro-tracker-api
+    pull_policy: always
     restart: unless-stopped
     ports:
       - "2727:2727"
