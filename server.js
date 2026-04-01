@@ -68,40 +68,23 @@ async function connectDB() {
 }
 
 // Serve static assets from views/ (logo, images, etc.)
-// index.html must never be cached so landing page changes reflect immediately
-app.use(express.static(path.join(__dirname, 'views'), {
-  setHeaders(res, filePath) {
-    if (filePath.endsWith('index.html') || filePath.endsWith('privacy.html')) {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    }
-  }
-}));
+app.use(express.static(path.join(__dirname, 'views')));
 
 // Serve Angular app at /web-app (all static assets under /web-app/*)
-// Hashed assets (*.js, *.css) get long-term cache; index.html must never be cached
-app.use('/web-app', express.static(path.join(__dirname, 'www'), {
-  setHeaders(res, filePath) {
-    if (filePath.endsWith('index.html')) {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    }
-  }
-}));
+app.use('/web-app', express.static(path.join(__dirname, 'www')));
 
 // GET / — serve landing page
 app.get('/', (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.sendFile(path.join(__dirname, 'views/index.html'));
 });
 
 // GET /privacy — serve privacy policy
 app.get('/privacy', (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.sendFile(path.join(__dirname, 'views/privacy.html'));
 });
 
 // GET /web-app/* — catch-all for Angular deep links (client-side routing)
 app.get('/web-app/*', (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.sendFile(path.join(__dirname, 'www/index.html'));
 });
 
