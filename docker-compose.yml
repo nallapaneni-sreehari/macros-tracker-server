@@ -7,9 +7,7 @@ services:
       - mongo-data:/data/db
 
   api:
-    build:
-      context: ..
-      dockerfile: macros-tracker-server/Dockerfile
+    image: r151149/macro-tracker:latest
     container_name: macro-tracker-api
     restart: unless-stopped
     ports:
