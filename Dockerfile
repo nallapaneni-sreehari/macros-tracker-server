@@ -8,7 +8,7 @@ RUN npm ci --omit=dev
 COPY macros-tracker-server/server.js ./
 COPY macros-tracker-server/views/ ./views/
 COPY macros-tracker-server/templates/ ./templates/
-COPY www/ ./www/
+COPY www-web/ ./www/
 
 EXPOSE 2727
 

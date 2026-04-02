@@ -88,6 +88,10 @@ app.get('/web-app/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'www/index.html'));
 });
 
+// Demo account for Google Play / app store reviewers
+const DEMO_EMAIL = (process.env.DEMO_EMAIL || '').trim().toLowerCase();
+const DEMO_OTP   = (process.env.DEMO_OTP   || '').trim();
+
 // POST /api/auth/send-otp — generate & email a 6-digit OTP
 app.post('/api/auth/send-otp', async (req, res) => {
   try {
@@ -96,6 +100,12 @@ app.post('/api/auth/send-otp', async (req, res) => {
       return res.status(400).json({ error: 'Valid email required' });
     }
     const normalizedEmail = email.trim().toLowerCase();
+
+    // Demo account: skip email sending, accept fixed OTP
+    if (DEMO_EMAIL && DEMO_OTP && normalizedEmail === DEMO_EMAIL) {
+      console.log(`[AUTH] Demo account OTP bypass for ${normalizedEmail}`);
+      return res.json({ success: true });
+    }
 
     // Rate-limit: block repeated requests within 60 seconds
     const recent = await db.collection(OTP_COLLECTION).findOne({
@@ -138,6 +148,13 @@ app.post('/api/auth/verify-otp', async (req, res) => {
       return res.status(400).json({ error: 'Email and OTP are required' });
     }
     const normalizedEmail = email.trim().toLowerCase();
+
+    // Demo account: accept fixed OTP without DB lookup
+    if (DEMO_EMAIL && DEMO_OTP && normalizedEmail === DEMO_EMAIL && otp.trim() === DEMO_OTP) {
+      console.log(`[AUTH] Demo account verified for ${normalizedEmail}`);
+      return res.json({ success: true });
+    }
+
     const record = await db.collection(OTP_COLLECTION).findOne({ email: normalizedEmail });
 
     if (!record) {
