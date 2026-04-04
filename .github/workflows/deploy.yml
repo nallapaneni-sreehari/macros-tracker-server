@@ -9,7 +9,7 @@ on:
       build_from_source:
         description: 'Build image from source instead of pulling from Docker Hub'
         required: false
-        default: 'false'
+        default: 'true'
         type: choice
         options:
           - 'false'
