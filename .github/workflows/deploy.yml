@@ -3,7 +3,7 @@ name: Deploy Macro Tracker Server
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
