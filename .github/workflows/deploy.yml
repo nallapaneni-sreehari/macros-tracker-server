@@ -35,7 +35,5 @@ jobs:
             fi
 
             cd "$REPO_DIR"
-            git fetch --all
-            git reset --hard origin/main
-
+            git pull origin master
             docker compose down && docker compose up -d --build
