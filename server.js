@@ -53,6 +53,10 @@ function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function healthCheck(req, res) {
+  res.json({ status: 'ok', timestamp: new Date() });
+}
+
 let db;
 
 async function connectDB() {
@@ -87,6 +91,9 @@ app.get('/privacy', (req, res) => {
 app.get('/web-app/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'www/index.html'));
 });
+
+// GET /api/health — simple health check endpoint
+app.get('/api/health', healthCheck);
 
 // Demo account for Google Play / app store reviewers
 const DEMO_EMAIL = (process.env.DEMO_EMAIL || '').trim().toLowerCase();
