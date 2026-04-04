@@ -8,6 +8,9 @@ services:
 
   api:
     image: r151149/macro-tracker:latest
+    build:
+      context: ..
+      dockerfile: macros-tracker-server/Dockerfile
     container_name: macro-tracker-api
     pull_policy: always
     restart: unless-stopped

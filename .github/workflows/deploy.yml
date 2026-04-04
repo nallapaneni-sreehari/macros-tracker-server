@@ -4,6 +4,16 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      build_from_source:
+        description: 'Build image from source instead of pulling from Docker Hub'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   deploy:
@@ -15,11 +25,14 @@ jobs:
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          BUILD_FROM_SOURCE: ${{ github.event.inputs.build_from_source || 'false' }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
+          envs: BUILD_FROM_SOURCE
           script: |
             # Load Node — try NVM first, fall back to system PATH
             export NVM_DIR="$HOME/.nvm"
@@ -36,4 +49,11 @@ jobs:
 
             cd "$REPO_DIR"
             git pull origin master
-            docker compose down && docker compose up -d --build
+
+            if [ "$BUILD_FROM_SOURCE" = "true" ]; then
+              echo "Building image from source..."
+              docker compose up -d --build --pull never
+            else
+              echo "Pulling image from Docker Hub..."
+              docker compose down && docker compose up -d
+            fi
