@@ -34,6 +34,7 @@ const DB_NAME = 'macro_tracker';
 const COLLECTION = 'kv_store';
 const OTP_COLLECTION = 'otp_store';
 const CHAT_COLLECTION = 'chat_store';
+const FEEDBACK_COLLECTION = 'feedback_store';
 
 // Nodemailer transporter (lazy)
 let _transporter;
@@ -68,6 +69,9 @@ async function connectDB() {
   await db.collection(OTP_COLLECTION).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   // Index for fast per-user conversation lookups
   await db.collection(CHAT_COLLECTION).createIndex({ userId: 1 }, { unique: true });
+  // Index for feedback filtering by category and creation time
+  await db.collection(FEEDBACK_COLLECTION).createIndex({ category: 1, createdAt: -1 });
+  await db.collection(FEEDBACK_COLLECTION).createIndex({ createdAt: -1 });
   console.log('Connected to MongoDB');
 }
 
@@ -85,6 +89,11 @@ app.get('/', (req, res) => {
 // GET /privacy — serve privacy policy
 app.get('/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'views/privacy.html'));
+});
+
+// GET /feedback — serve feedback page
+app.get('/feedback', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views/feedback.html'));
 });
 
 // GET /web-app/* — catch-all for Angular deep links (client-side routing)
@@ -364,6 +373,63 @@ app.delete('/api/conversations/:userId', async (req, res) => {
     await db.collection(CHAT_COLLECTION).deleteOne({ userId: req.params.userId });
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/feedback — submit a new feedback entry
+app.post('/api/feedback', async (req, res) => {
+  try {
+    const { name, email, category, rating, message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    if (message.trim().length > 2000) {
+      return res.status(400).json({ error: 'Message must be 2000 characters or fewer' });
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+    const allowedCategories = ['general', 'bug', 'feature', 'ai', 'performance'];
+    const resolvedCategory = allowedCategories.includes(category) ? category : 'general';
+    const resolvedRating = Number.isInteger(rating) && rating >= 1 && rating <= 5 ? rating : null;
+
+    const doc = {
+      name: (name || 'Anonymous').trim().slice(0, 80),
+      email: email ? email.trim().toLowerCase().slice(0, 120) : null,
+      category: resolvedCategory,
+      rating: resolvedRating,
+      message: message.trim(),
+      createdAt: new Date(),
+    };
+
+    await db.collection(FEEDBACK_COLLECTION).insertOne(doc);
+    console.log(`[FEEDBACK] New submission — category=${resolvedCategory} rating=${resolvedRating}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[FEEDBACK] POST error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/feedback — retrieve feedback entries (optional ?category= filter)
+app.get('/api/feedback', async (req, res) => {
+  try {
+    const allowedCategories = ['general', 'bug', 'feature', 'ai', 'performance'];
+    const { category } = req.query;
+    const query = category && allowedCategories.includes(category) ? { category } : {};
+
+    const feedback = await db.collection(FEEDBACK_COLLECTION)
+      .find(query, { projection: { _id: 0, name: 1, email: 1, category: 1, rating: 1, message: 1, createdAt: 1 } })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray();
+
+    const total = await db.collection(FEEDBACK_COLLECTION).countDocuments(query);
+    res.json({ feedback, total });
+  } catch (err) {
+    console.error('[FEEDBACK] GET error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

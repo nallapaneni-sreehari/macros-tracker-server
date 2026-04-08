@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feedback — MacroTracker</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='100 100 480 480'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%2313112a'/%3E%3Cstop offset='1' stop-color='%230f0e1a'/%3E%3C/linearGradient%3E%3ClinearGradient id='r' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%236C5CE7'/%3E%3Cstop offset='1' stop-color='%23a29bfe'/%3E%3C/linearGradient%3E%3ClinearGradient id='l' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop stop-color='%23a29bfe'/%3E%3Cstop offset='1' stop-color='%236C5CE7'/%3E%3C/linearGradient%3E%3CclipPath id='c'%3E%3Crect x='100' y='100' width='480' height='480' rx='108'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect x='100' y='100' width='480' height='480' rx='108' fill='url(%23b)'/%3E%3Ccircle cx='340' cy='340' r='162' fill='none' stroke='url(%23r)' stroke-width='22' stroke-linecap='round' stroke-dasharray='818 1018' stroke-dashoffset='-65' transform='rotate(-110 340 340)' clip-path='url(%23c)'/%3E%3Cpath d='M340 230C310 250 285 285 288 318 291 352 315 378 340 390 365 378 389 352 392 318 395 285 370 250 340 230Z' fill='url(%23l)' clip-path='url(%23c)'/%3E%3Ccircle cx='446' cy='221' r='18' fill='%23e17055' clip-path='url(%23c)'/%3E%3C/svg%3E" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- AOS — Animate on Scroll -->
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js"></script>
+
+  <!-- Google Fonts — Urbanist -->
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Urbanist', 'sans-serif'] },
+          colors: {
+            primary: { DEFAULT: '#6C5CE7', light: '#a29bfe', dark: '#4834d4' },
+            accent:  { DEFAULT: '#e17055', light: '#fab1a0' },
+            surface: '#0f0e1a',
+            card:    '#1a1928',
+            border:  '#2d2b45',
+          },
+          backgroundImage: {
+            'pill-grad':   'linear-gradient(135deg, #6C5CE7 0%, #a29bfe 100%)',
+            'accent-grad': 'linear-gradient(135deg, #e17055 0%, #fab1a0 100%)',
+          },
+          keyframes: {
+            'float': { '0%,100%': {transform:'translateY(0)'}, '50%': {transform:'translateY(-12px)'} },
+          },
+          animation: {
+            float: 'float 4s ease-in-out infinite',
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { background-color: #0f0e1a; color: #e2e0ff; font-family: 'Urbanist', sans-serif; }
+
+    .glass {
+      background: rgba(26,25,40,0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(108,92,231,0.18);
+    }
+    .grad-text {
+      background: linear-gradient(135deg, #a29bfe 0%, #6C5CE7 40%, #e17055 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background: #0f0e1a; }
+    ::-webkit-scrollbar-thumb { background: #6C5CE7; border-radius:3px; }
+
+    .blob {
+      position:absolute; border-radius:50%; filter:blur(80px); pointer-events:none; opacity:0.25;
+    }
+
+    /* Form inputs */
+    .form-input {
+      width: 100%;
+      background: rgba(26,25,40,0.6);
+      border: 1px solid rgba(108,92,231,0.25);
+      border-radius: 14px;
+      padding: 12px 16px;
+      color: #e2e0ff;
+      font-family: 'Urbanist', sans-serif;
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      resize: none;
+    }
+    .form-input::placeholder { color: rgba(226,224,255,0.3); }
+    .form-input:focus {
+      border-color: rgba(108,92,231,0.6);
+      box-shadow: 0 0 0 3px rgba(108,92,231,0.1);
+    }
+    .form-input option { background: #1a1928; color: #e2e0ff; }
+
+    /* Star rating */
+    .star-btn {
+      cursor: pointer;
+      transition: color 0.15s, transform 0.15s;
+      color: rgba(226,224,255,0.4);
+      font-size: 2rem;
+      line-height: 1;
+      background: none;
+      border: none;
+      padding: 2px 3px;
+      user-select: none;
+      -webkit-text-fill-color: currentColor;
+    }
+    .star-btn:hover, .star-btn.active { color: #f9a825; transform: scale(1.2); }
+
+    /* Nav link hover */
+    .nav-link { position:relative; }
+    .nav-link::after { content:''; position:absolute; bottom:-2px; left:0; width:0; height:2px; background:#6C5CE7; border-radius:2px; transition:width .3s; }
+    .nav-link:hover::after { width:100%; }
+
+    /* Theme toggle */
+    .theme-toggle {
+      position:relative; width:44px; height:30px;
+      background:rgba(108,92,231,0.18); border:1px solid rgba(108,92,231,0.28);
+      border-radius:999px; cursor:pointer; transition:background .3s,border-color .3s;
+      flex-shrink:0;
+    }
+    html.light .theme-toggle { background:rgba(108,92,231,0.12); border-color:rgba(108,92,231,0.2); }
+    .theme-toggle-knob {
+      position:absolute; top:3px; left:3px;
+      width:22px; height:22px; border-radius:50%;
+      background:linear-gradient(135deg,#6C5CE7,#a29bfe);
+      transition:transform .35s cubic-bezier(.34,1.56,.64,1), background .3s;
+      display:flex; align-items:center; justify-content:center;
+    }
+    html.light .theme-toggle-knob {
+      transform:translateX(16px);
+      background:linear-gradient(135deg,#f9a825,#fb8c00);
+    }
+    .theme-toggle-knob i { font-size:9px; color:#fff; pointer-events:none; }
+
+    /* Light theme */
+    html.light body { background-color: #f4f3ff; color: #1a1928; }
+    html.light .glass { background: rgba(255,255,255,0.80); border-color: rgba(108,92,231,0.15); }
+    html.light ::-webkit-scrollbar-track { background: #f4f3ff; }
+    html.light .text-white\/70 { color: rgba(26,25,40,0.72) !important; }
+    html.light .text-white\/60 { color: rgba(26,25,40,0.58) !important; }
+    html.light .text-white\/55 { color: rgba(26,25,40,0.55) !important; }
+    html.light .text-white\/50 { color: rgba(26,25,40,0.5) !important; }
+    html.light .text-white\/45 { color: rgba(26,25,40,0.45) !important; }
+    html.light .text-white\/40 { color: rgba(26,25,40,0.42) !important; }
+    html.light .text-white\/35 { color: rgba(26,25,40,0.38) !important; }
+    html.light .text-white\/30 { color: rgba(26,25,40,0.35) !important; }
+    html.light .text-white\/25 { color: rgba(26,25,40,0.28) !important; }
+    html.light .text-white\/20 { color: rgba(26,25,40,0.25) !important; }
+    html.light .border-border { border-color: #dddaf7; }
+    html.light .border-border\/50 { border-color: rgba(221,218,247,0.5); }
+    html.light #navbar.backdrop-blur-2xl { background: rgba(244,243,255,0.92) !important; border-color: rgba(108,92,231,0.15) !important; }
+    html.light .form-input { background: rgba(244,243,255,0.8); color: #1a1928; border-color: rgba(108,92,231,0.2); }
+    html.light .form-input::placeholder { color: rgba(26,25,40,0.3); }
+    html.light .bg-surface { background-color: #f4f3ff !important; }
+
+    /* Table */
+    .tbl-row:hover { background: rgba(108,92,231,0.05); }
+
+    /* Category badge colors */
+    .badge-bug { background: rgba(225,112,85,0.15); color: #fab1a0; border: 1px solid rgba(225,112,85,0.25); }
+    .badge-feature { background: rgba(108,92,231,0.15); color: #a29bfe; border: 1px solid rgba(108,92,231,0.25); }
+    .badge-general { background: rgba(0,184,148,0.12); color: #55efc4; border: 1px solid rgba(0,184,148,0.2); }
+    .badge-ai { background: rgba(253,203,110,0.12); color: #fdcb6e; border: 1px solid rgba(253,203,110,0.2); }
+    .badge-perf { background: rgba(116,185,255,0.12); color: #74b9ff; border: 1px solid rgba(116,185,255,0.2); }
+
+    /* Noise overlay */
+    .noise::after { content:''; position:absolute; inset:0; pointer-events:none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity:.4; }
+  </style>
+</head>
+<body class="relative overflow-x-hidden">
+
+  <!-- ══════════════════════════════════════════════════════════
+       NAV
+  ══════════════════════════════════════════════════════════ -->
+  <nav id="navbar" class="fixed top-0 inset-x-0 z-50 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-2 group">
+        <svg width="36" height="36" viewBox="100 100 480 480" xmlns="http://www.w3.org/2000/svg" class="rounded-xl shadow-lg shadow-primary/30" style="flex-shrink:0">
+          <defs>
+            <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#13112a"/><stop offset="100%" stop-color="#0f0e1a"/></linearGradient>
+            <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6C5CE7"/><stop offset="100%" stop-color="#a29bfe"/></linearGradient>
+            <linearGradient id="leafGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a29bfe"/><stop offset="100%" stop-color="#6C5CE7"/></linearGradient>
+            <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="coralGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="10" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <clipPath id="iconClip"><rect x="100" y="100" width="480" height="480" rx="108"/></clipPath>
+          </defs>
+          <rect x="100" y="100" width="480" height="480" rx="108" fill="url(#bgGrad)"/>
+          <circle cx="340" cy="340" r="162" fill="none" stroke="url(#ringGrad)" stroke-width="22" stroke-linecap="round" stroke-dasharray="818 1018" stroke-dashoffset="-65" transform="rotate(-110 340 340)" clip-path="url(#iconClip)"/>
+          <g filter="url(#softGlow)" clip-path="url(#iconClip)">
+            <path d="M340 230 C310 250,285 285,288 318 C291 352,315 378,340 390 C365 378,389 352,392 318 C395 285,370 250,340 230 Z" fill="url(#leafGrad)" opacity="0.96"/>
+          </g>
+          <circle cx="446" cy="221" r="18" fill="#e17055" filter="url(#coralGlow)" clip-path="url(#iconClip)"/>
+        </svg>
+        <span class="text-xl font-black tracking-tight">Macro<span class="text-primary">Tracker</span></span>
+      </a>
+
+      <!-- Desktop links -->
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
+        <a href="/#features" class="nav-link hover:text-white transition-colors">Features</a>
+        <a href="/#how-it-works" class="nav-link hover:text-white transition-colors">How it Works</a>
+        <a href="/#ai" class="nav-link hover:text-white transition-colors">AI</a>
+        <a href="/#milo" class="nav-link hover:text-white transition-colors">Milo</a>
+        <a href="/#testimonials" class="nav-link hover:text-white transition-colors">Reviews</a>
+        <a href="/feedback" class="nav-link text-primary-light hover:text-white transition-colors">Feedback</a>
+      </div>
+
+      <!-- Theme toggle + CTA -->
+      <div class="hidden md:flex items-center gap-3">
+        <button id="theme-toggle" onclick="toggleTheme()" class="theme-toggle" aria-label="Toggle theme">
+          <span class="theme-toggle-knob"><i class="ph ph-moon" id="theme-icon"></i></span>
+        </button>
+        <a href="/#download" class="inline-flex items-center gap-2 bg-pill-grad text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-transform">
+          <i class="ph ph-device-mobile-camera"></i>
+          Get the App
+        </a>
+      </div>
+
+      <!-- Mobile hamburger -->
+      <button id="hamburger" class="md:hidden text-white/70 hover:text-white">
+        <i class="ph ph-list text-2xl"></i>
+      </button>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="md:hidden hidden glass border-t border-border">
+      <div class="flex flex-col px-6 py-4 gap-5 text-sm font-medium text-white/70">
+        <a href="/#features" class="hover:text-white">Features</a>
+        <a href="/#how-it-works" class="hover:text-white">How it Works</a>
+        <a href="/#ai" class="hover:text-white">AI</a>
+        <a href="/#milo" class="hover:text-white">Milo</a>
+        <a href="/#testimonials" class="hover:text-white">Reviews</a>
+        <a href="/feedback" class="text-primary-light hover:text-white">Feedback</a>
+        <a href="/#download" class="bg-pill-grad text-white font-semibold px-4 py-2.5 rounded-xl text-center">Get the App</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════
+       HERO / HEADER
+  ══════════════════════════════════════════════════════════ -->
+  <section class="relative pt-36 pb-20 overflow-hidden noise">
+    <div class="blob w-[500px] h-[500px] bg-primary top-[-180px] left-[-180px]"></div>
+    <div class="blob w-[350px] h-[350px] bg-accent top-[30%] right-[-120px]"></div>
+
+    <div class="relative z-10 max-w-3xl mx-auto px-6 text-center" data-aos="fade-up" data-aos-duration="700">
+      <div class="inline-flex items-center gap-2 bg-primary/20 border border-primary/30 text-primary-light text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
+        <i class="ph ph-chat-dots text-sm"></i>
+        Share Your Thoughts
+      </div>
+      <h1 class="text-5xl md:text-6xl font-black leading-tight tracking-tight mb-5">
+        We'd love your <span class="grad-text">feedback</span>
+      </h1>
+      <p class="text-white/50 text-lg leading-relaxed max-w-xl mx-auto">
+        Help us make MacroTracker better. Report bugs, request features, or just let us know how we're doing.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       FEEDBACK FORM
+  ══════════════════════════════════════════════════════════ -->
+  <section class="pb-24 relative">
+    <div class="max-w-2xl mx-auto px-6">
+
+      <div data-aos="fade-up" data-aos-duration="700" data-aos-delay="100" class="glass rounded-3xl p-8 md:p-10 shadow-2xl shadow-primary/10">
+
+        <form id="feedback-form" novalidate>
+
+          <!-- Name + Email row -->
+          <div class="grid sm:grid-cols-2 gap-5 mb-5">
+            <div>
+              <label class="block text-sm font-semibold text-white/70 mb-2">Name <span class="text-white/30 font-normal">(optional)</span></label>
+              <input id="f-name" type="text" maxlength="80" placeholder="Your name" class="form-input" />
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-white/70 mb-2">Email <span class="text-white/30 font-normal">(optional)</span></label>
+              <input id="f-email" type="email" maxlength="120" placeholder="you@example.com" class="form-input" />
+              <p id="email-err" class="hidden text-xs text-accent mt-1.5 pl-1">Please enter a valid email address.</p>
+            </div>
+          </div>
+
+          <!-- Category -->
+          <div class="mb-5">
+            <label class="block text-sm font-semibold text-white/70 mb-2">Category</label>
+            <div class="relative">
+              <select id="f-category" class="form-input appearance-none pr-10 cursor-pointer">
+                <option value="general">General Feedback</option>
+                <option value="bug">Bug Report</option>
+                <option value="feature">Feature Request</option>
+                <option value="ai">AI / Milo Feedback</option>
+                <option value="performance">Performance Issue</option>
+              </select>
+              <i class="ph ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none"></i>
+            </div>
+          </div>
+
+          <!-- Star Rating -->
+          <div class="mb-5">
+            <label class="block text-sm font-semibold text-white/70 mb-3">Overall Rating</label>
+            <div id="star-group" class="flex items-center gap-1" role="group" aria-label="Rating">
+              <button type="button" class="star-btn" data-val="1" aria-label="1 star">★</button>
+              <button type="button" class="star-btn" data-val="2" aria-label="2 stars">★</button>
+              <button type="button" class="star-btn" data-val="3" aria-label="3 stars">★</button>
+              <button type="button" class="star-btn" data-val="4" aria-label="4 stars">★</button>
+              <button type="button" class="star-btn" data-val="5" aria-label="5 stars">★</button>
+            </div>
+            <p id="rating-label" class="text-xs text-white/35 mt-2">No rating selected</p>
+          </div>
+
+          <!-- Message -->
+          <div class="mb-7">
+            <label class="block text-sm font-semibold text-white/70 mb-2">Message <span class="text-accent-light text-xs">*</span></label>
+            <textarea id="f-message" rows="5" maxlength="2000" placeholder="Tell us what you think, what's broken, or what you'd love to see…" class="form-input"></textarea>
+            <div class="flex justify-between mt-1.5">
+              <p id="msg-err" class="hidden text-xs text-accent pl-1">Message is required.</p>
+              <p id="char-count" class="text-xs text-white/25 ml-auto">0 / 2000</p>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" id="submit-btn"
+            class="w-full flex items-center justify-center gap-2.5 bg-pill-grad text-white font-bold text-base px-6 py-3.5 rounded-2xl shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100">
+            <i class="ph ph-paper-plane-tilt text-lg" id="submit-icon"></i>
+            <span id="submit-label">Send Feedback</span>
+          </button>
+
+        </form>
+
+        <!-- Success state (hidden initially) -->
+        <div id="success-msg" class="hidden text-center py-6">
+          <div class="w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center mx-auto mb-4 animate-float">
+            <i class="ph ph-check-circle text-3xl text-primary-light"></i>
+          </div>
+          <h3 class="text-xl font-black mb-2">Thanks for the feedback! 🙌</h3>
+          <p class="text-white/50 text-sm mb-6">Your response has been recorded. We read every single one.</p>
+          <button onclick="resetForm()" class="inline-flex items-center gap-2 text-sm text-primary-light hover:text-white transition-colors font-semibold">
+            <i class="ph ph-arrow-counter-clockwise"></i> Submit another
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       FEEDBACK TABLE
+  ══════════════════════════════════════════════════════════ -->
+  <section class="pb-28 relative">
+    <div class="max-w-7xl mx-auto px-6">
+
+      <div class="text-center mb-12" data-aos="fade-up">
+        <div class="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 text-accent-light text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
+          <i class="ph ph-list-bullets text-sm"></i>
+          Community Submissions
+        </div>
+        <h2 class="text-3xl md:text-4xl font-black mb-3">What people are <span class="grad-text">saying</span></h2>
+        <p class="text-white/45 text-base max-w-lg mx-auto">All submitted feedback, updated in real time.</p>
+      </div>
+
+      <!-- Filter bar -->
+      <div data-aos="fade-up" data-aos-delay="50" class="flex flex-wrap items-center gap-3 mb-7">
+        <span class="text-sm text-white/40 font-medium">Filter:</span>
+        <button onclick="loadFeedback('all')" data-filter="all"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-semibold border transition-all bg-primary/20 border-primary/40 text-primary-light">
+          All
+        </button>
+        <button onclick="loadFeedback('general')" data-filter="general"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-white/10 text-white/45 hover:border-primary/30 hover:text-primary-light transition-all">
+          General
+        </button>
+        <button onclick="loadFeedback('bug')" data-filter="bug"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-white/10 text-white/45 hover:border-accent/30 hover:text-accent-light transition-all">
+          Bugs
+        </button>
+        <button onclick="loadFeedback('feature')" data-filter="feature"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-white/10 text-white/45 hover:border-primary/30 hover:text-primary-light transition-all">
+          Features
+        </button>
+        <button onclick="loadFeedback('ai')" data-filter="ai"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-white/10 text-white/45 hover:border-primary/30 hover:text-primary-light transition-all">
+          AI / Milo
+        </button>
+        <button onclick="loadFeedback('performance')" data-filter="performance"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-white/10 text-white/45 hover:border-primary/30 hover:text-primary-light transition-all">
+          Performance
+        </button>
+        <span id="total-count" class="ml-auto text-xs text-white/30 font-medium"></span>
+      </div>
+
+      <!-- Table card -->
+      <div data-aos="fade-up" data-aos-delay="100" class="glass rounded-3xl overflow-hidden shadow-2xl shadow-primary/10">
+
+        <!-- Loading state -->
+        <div id="table-loading" class="flex items-center justify-center gap-3 py-16 text-white/35">
+          <svg class="animate-spin w-5 h-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          </svg>
+          Loading feedback…
+        </div>
+
+        <!-- Empty state -->
+        <div id="table-empty" class="hidden flex-col items-center justify-center py-16 text-center px-6">
+          <i class="ph ph-chat-circle-dots text-4xl text-white/20 mb-3"></i>
+          <p class="text-white/40 text-sm">No feedback yet for this category.<br/>Be the first to share your thoughts!</p>
+        </div>
+
+        <!-- Actual table (desktop) -->
+        <div id="table-wrap" class="hidden overflow-x-auto">
+          <table class="w-full min-w-[700px] text-sm">
+            <thead>
+              <tr class="border-b border-border">
+                <th class="py-4 px-6 text-left text-xs font-semibold text-white/35 uppercase tracking-widest w-10">#</th>
+                <th class="py-4 px-4 text-left text-xs font-semibold text-white/35 uppercase tracking-widest">Name</th>
+                <th class="py-4 px-4 text-left text-xs font-semibold text-white/35 uppercase tracking-widest">Category</th>
+                <th class="py-4 px-4 text-left text-xs font-semibold text-white/35 uppercase tracking-widest">Rating</th>
+                <th class="py-4 px-4 text-left text-xs font-semibold text-white/35 uppercase tracking-widest">Message</th>
+                <th class="py-4 px-6 text-left text-xs font-semibold text-white/35 uppercase tracking-widest whitespace-nowrap">Date</th>
+              </tr>
+            </thead>
+            <tbody id="feedback-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Mobile cards -->
+        <div id="mobile-cards" class="hidden divide-y divide-border"></div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════════════════════ -->
+  <footer class="py-14 border-t border-border">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+        <div class="flex items-center gap-2">
+          <svg width="32" height="32" viewBox="100 100 480 480" xmlns="http://www.w3.org/2000/svg" class="rounded-xl shadow-md shadow-primary/30" style="flex-shrink:0">
+            <defs>
+              <linearGradient id="fBg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#13112a"/><stop offset="1" stop-color="#0f0e1a"/></linearGradient>
+              <linearGradient id="fRing" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6C5CE7"/><stop offset="1" stop-color="#a29bfe"/></linearGradient>
+              <linearGradient id="fLeaf" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#a29bfe"/><stop offset="1" stop-color="#6C5CE7"/></linearGradient>
+              <clipPath id="fClip"><rect x="100" y="100" width="480" height="480" rx="108"/></clipPath>
+            </defs>
+            <rect x="100" y="100" width="480" height="480" rx="108" fill="url(#fBg)"/>
+            <circle cx="340" cy="340" r="162" fill="none" stroke="url(#fRing)" stroke-width="22" stroke-linecap="round" stroke-dasharray="818 1018" stroke-dashoffset="-65" transform="rotate(-110 340 340)" clip-path="url(#fClip)"/>
+            <path d="M340 230C310 250 285 285 288 318 291 352 315 378 340 390 365 378 389 352 392 318 395 285 370 250 340 230Z" fill="url(#fLeaf)" clip-path="url(#fClip)"/>
+            <circle cx="446" cy="221" r="18" fill="#e17055" clip-path="url(#fClip)"/>
+          </svg>
+          <span class="text-lg font-black">Macro<span class="text-primary">Tracker</span></span>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-center gap-6 text-sm text-white/40">
+          <a href="/#features" class="hover:text-white transition-colors">Features</a>
+          <a href="/privacy" class="hover:text-white transition-colors">Privacy Policy</a>
+          <a href="/feedback" class="hover:text-white transition-colors text-primary-light">Feedback</a>
+          <a href="#" class="hover:text-white transition-colors">Terms</a>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <a href="https://x.com/na74578" target="_blank" rel="noopener noreferrer" class="w-9 h-9 glass rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:border-primary/40 transition-all">
+            <i class="ph ph-twitter-logo text-lg"></i>
+          </a>
+          <a href="https://www.linkedin.com/in/sreehari-nallapaneni-0b1809161/" target="_blank" rel="noopener noreferrer" class="w-9 h-9 glass rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:border-primary/40 transition-all">
+            <i class="ph ph-linkedin-logo text-lg"></i>
+          </a>
+          <a href="https://github.com/nallapaneni-sreehari/macro-tracker" target="_blank" rel="noopener noreferrer" class="w-9 h-9 glass rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:border-primary/40 transition-all">
+            <i class="ph ph-github-logo text-lg"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="mt-10 pt-6 border-t border-border/50 text-center text-xs text-white/20">
+        © 2026 MacroTracker. Built with ❤️ and lots of protein. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 bg-card border border-primary/30 text-white text-sm font-medium px-5 py-3.5 rounded-2xl shadow-2xl shadow-primary/20 opacity-0 translate-y-4 pointer-events-none transition-all duration-300 whitespace-nowrap">
+    <i class="ph ph-warning-circle text-lg text-accent" id="toast-icon"></i>
+    <span id="toast-msg">Something went wrong.</span>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCRIPTS
+  ══════════════════════════════════════════════════════════ -->
+  <script>
+    AOS.init({ once: true, easing: 'ease-out-cubic', offset: 60 });
+
+    // ── Sticky nav ──
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 20) {
+        navbar.classList.add('bg-surface/80', 'backdrop-blur-2xl', 'border-b', 'border-border');
+      } else {
+        navbar.classList.remove('bg-surface/80', 'backdrop-blur-2xl', 'border-b', 'border-border');
+      }
+    });
+
+    // ── Hamburger ──
+    document.getElementById('hamburger').addEventListener('click', () => {
+      document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+    document.querySelectorAll('#mobile-menu a').forEach(a => {
+      a.addEventListener('click', () => document.getElementById('mobile-menu').classList.add('hidden'));
+    });
+
+    // ── Theme ──
+    function toggleTheme() {
+      const isLight = document.documentElement.classList.toggle('light');
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      document.getElementById('theme-icon').className = isLight ? 'ph ph-sun' : 'ph ph-moon';
+    }
+    (function () {
+      if (localStorage.getItem('theme') === 'light') {
+        document.documentElement.classList.add('light');
+        const icon = document.getElementById('theme-icon');
+        if (icon) icon.className = 'ph ph-sun';
+      }
+    })();
+
+    // ── Toast helper ──
+    let _toastTimer;
+    function showToast(msg, isError = true) {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      document.getElementById('toast-icon').className = isError
+        ? 'ph ph-warning-circle text-lg text-accent'
+        : 'ph ph-check-circle text-lg text-primary-light';
+      clearTimeout(_toastTimer);
+      t.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+      t.classList.add('opacity-100', 'translate-y-0');
+      _toastTimer = setTimeout(() => {
+        t.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+        t.classList.remove('opacity-100', 'translate-y-0');
+      }, 4000);
+    }
+
+    // ── Star rating ──
+    let selectedRating = 0;
+    const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'];
+    const stars = document.querySelectorAll('.star-btn');
+
+    function paintStars(val) {
+      stars.forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.val) <= val);
+      });
+    }
+    stars.forEach(s => {
+      s.addEventListener('mouseenter', () => paintStars(parseInt(s.dataset.val)));
+      s.addEventListener('mouseleave', () => paintStars(selectedRating));
+      s.addEventListener('click', () => {
+        selectedRating = parseInt(s.dataset.val);
+        paintStars(selectedRating);
+        document.getElementById('rating-label').textContent =
+          selectedRating ? `${ratingLabels[selectedRating]} (${selectedRating}/5)` : 'No rating selected';
+      });
+    });
+
+    // ── Char counter ──
+    const msgEl = document.getElementById('f-message');
+    msgEl.addEventListener('input', () => {
+      document.getElementById('char-count').textContent = `${msgEl.value.length} / 2000`;
+    });
+
+    // ── Form submit ──
+    const form = document.getElementById('feedback-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Validate email
+      const emailEl  = document.getElementById('f-email');
+      const emailErr = document.getElementById('email-err');
+      const emailVal = emailEl.value.trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailVal && !emailRegex.test(emailVal)) {
+        emailErr.classList.remove('hidden');
+        emailEl.focus();
+        return;
+      }
+      emailErr.classList.add('hidden');
+
+      // Validate message
+      const msgErr = document.getElementById('msg-err');
+      const msgVal = msgEl.value.trim();
+      if (!msgVal) {
+        msgErr.classList.remove('hidden');
+        msgEl.focus();
+        return;
+      }
+      msgErr.classList.add('hidden');
+
+      // Submit
+      const btn   = document.getElementById('submit-btn');
+      const label = document.getElementById('submit-label');
+      const icon  = document.getElementById('submit-icon');
+      btn.disabled = true;
+      label.textContent = 'Sending…';
+      icon.className = 'ph ph-circle-notch animate-spin text-lg';
+
+      try {
+        const payload = {
+          name:     document.getElementById('f-name').value.trim() || 'Anonymous',
+          email:    emailVal || null,
+          category: document.getElementById('f-category').value,
+          rating:   selectedRating || null,
+          message:  msgVal,
+        };
+
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Server error');
+        }
+
+        // Show success
+        form.classList.add('hidden');
+        document.getElementById('success-msg').classList.remove('hidden');
+        loadFeedback(currentFilter);  // refresh table
+
+      } catch (err) {
+        showToast(err.message || 'Failed to send. Please try again.');
+        btn.disabled = false;
+        label.textContent = 'Send Feedback';
+        icon.className = 'ph ph-paper-plane-tilt text-lg';
+      }
+    });
+
+    function resetForm() {
+      form.reset();
+      selectedRating = 0;
+      paintStars(0);
+      document.getElementById('rating-label').textContent = 'No rating selected';
+      document.getElementById('char-count').textContent = '0 / 2000';
+      document.getElementById('submit-btn').disabled = false;
+      document.getElementById('submit-label').textContent = 'Send Feedback';
+      document.getElementById('submit-icon').className = 'ph ph-paper-plane-tilt text-lg';
+      form.classList.remove('hidden');
+      document.getElementById('success-msg').classList.add('hidden');
+    }
+
+    // ── Feedback table ──
+    let currentFilter = 'all';
+    const categoryMeta = {
+      bug:         { label: 'Bug Report',      cls: 'badge-bug' },
+      feature:     { label: 'Feature Request', cls: 'badge-feature' },
+      general:     { label: 'General',         cls: 'badge-general' },
+      ai:          { label: 'AI / Milo',       cls: 'badge-ai' },
+      performance: { label: 'Performance',     cls: 'badge-perf' },
+    };
+
+    function starsHTML(rating) {
+      if (!rating) return '<span class="text-white/25 text-xs">—</span>';
+      return Array.from({ length: 5 }, (_, i) =>
+        `<i class="ph ph-star-fill text-xs ${i < rating ? 'text-yellow-400' : 'text-white/15'}"></i>`
+      ).join('');
+    }
+
+    function formatDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function truncate(str, n) {
+      return str.length > n ? str.slice(0, n) + '…' : str;
+    }
+
+    async function loadFeedback(filter) {
+      currentFilter = filter;
+
+      // Update active filter button
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        const active = btn.dataset.filter === filter;
+        btn.classList.toggle('bg-primary/20', active);
+        btn.classList.toggle('border-primary/40', active);
+        btn.classList.toggle('text-primary-light', active);
+        btn.classList.toggle('border-white/10', !active);
+        btn.classList.toggle('text-white/45', !active);
+      });
+
+      // Show loading
+      document.getElementById('table-loading').classList.remove('hidden');
+      document.getElementById('table-wrap').classList.add('hidden');
+      document.getElementById('mobile-cards').classList.add('hidden');
+      document.getElementById('table-empty').classList.add('hidden');
+      document.getElementById('total-count').textContent = '';
+
+      try {
+        const url = filter === 'all' ? '/api/feedback' : `/api/feedback?category=${encodeURIComponent(filter)}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to load feedback');
+        const { feedback, total } = await res.json();
+
+        document.getElementById('table-loading').classList.add('hidden');
+
+        if (!feedback || feedback.length === 0) {
+          document.getElementById('table-empty').classList.remove('hidden');
+          document.getElementById('table-empty').classList.add('flex');
+          return;
+        }
+
+        document.getElementById('total-count').textContent = `${total} submission${total !== 1 ? 's' : ''}`;
+
+        // Desktop table rows
+        const tbody = document.getElementById('feedback-tbody');
+        tbody.innerHTML = feedback.map((f, i) => {
+          const cat = categoryMeta[f.category] || { label: f.category, cls: 'badge-general' };
+          return `
+            <tr class="tbl-row border-b border-border/50 last:border-0 transition-colors">
+              <td class="py-4 px-6 text-white/25 text-xs font-mono">${i + 1}</td>
+              <td class="py-4 px-4">
+                <div class="font-semibold text-sm">${escHtml(f.name)}</div>
+                ${f.email ? `<div class="text-xs text-white/30 mt-0.5">${escHtml(f.email)}</div>` : ''}
+              </td>
+              <td class="py-4 px-4">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${cat.cls}">${cat.label}</span>
+              </td>
+              <td class="py-4 px-4">
+                <div class="flex items-center gap-0.5">${starsHTML(f.rating)}</div>
+              </td>
+              <td class="py-4 px-4 max-w-xs">
+                <p class="text-sm text-white/70 leading-relaxed">${escHtml(truncate(f.message, 120))}</p>
+              </td>
+              <td class="py-4 px-6 text-xs text-white/35 whitespace-nowrap">${formatDate(f.createdAt)}</td>
+            </tr>`;
+        }).join('');
+
+        // Mobile cards
+        const mobileCards = document.getElementById('mobile-cards');
+        mobileCards.innerHTML = feedback.map(f => {
+          const cat = categoryMeta[f.category] || { label: f.category, cls: 'badge-general' };
+          return `
+            <div class="p-5">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <p class="font-semibold text-sm">${escHtml(f.name)}</p>
+                  ${f.email ? `<p class="text-xs text-white/30">${escHtml(f.email)}</p>` : ''}
+                </div>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${cat.cls} flex-shrink-0">${cat.label}</span>
+              </div>
+              <p class="text-sm text-white/70 leading-relaxed mb-3">${escHtml(f.message)}</p>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-0.5">${starsHTML(f.rating)}</div>
+                <span class="text-xs text-white/30">${formatDate(f.createdAt)}</span>
+              </div>
+            </div>`;
+        }).join('');
+
+        // Show appropriate view
+        const isMobile = window.innerWidth < 700;
+        document.getElementById(isMobile ? 'mobile-cards' : 'table-wrap').classList.remove('hidden');
+
+      } catch (err) {
+        document.getElementById('table-loading').classList.add('hidden');
+        showToast('Could not load feedback submissions.');
+      }
+    }
+
+    // HTML escape to prevent XSS
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Responsive table/card toggle on resize
+    window.addEventListener('resize', () => {
+      const wrap   = document.getElementById('table-wrap');
+      const mobile = document.getElementById('mobile-cards');
+      if (wrap.classList.contains('hidden') && mobile.classList.contains('hidden')) return;
+      if (window.innerWidth < 700) {
+        wrap.classList.add('hidden');
+        mobile.classList.remove('hidden');
+      } else {
+        mobile.classList.add('hidden');
+        wrap.classList.remove('hidden');
+      }
+    });
+
+    // Initial load
+    loadFeedback('all');
+  </script>
+</body>
+</html>
