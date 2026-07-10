@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "worker": "node workers/email.worker.js"
   },
   "dependencies": {
+    "bullmq": "^5.79.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "ioredis": "^5.11.1",
     "mongodb": "^6.12.0",
     "nodemailer": "^6.9.14"
   }

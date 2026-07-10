@@ -6,6 +6,13 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  redis:
+    image: redis:7-alpine
+    container_name: macro-tracker-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+
   api:
     image: r151149/macro-tracker:latest
     build:
@@ -20,6 +27,22 @@ services:
       - .env
     depends_on:
       - mongo
+      - redis
+
+  email-worker:
+    image: r151149/macro-tracker:latest
+    build:
+      context: ..
+      dockerfile: macros-tracker-server/Dockerfile
+    container_name: macro-tracker-email-worker
+    pull_policy: always
+    restart: unless-stopped
+    command: ["node", "workers/email.worker.js"]
+    env_file:
+      - .env
+    depends_on:
+      - redis
 
 volumes:
   mongo-data:
+  redis-data:
