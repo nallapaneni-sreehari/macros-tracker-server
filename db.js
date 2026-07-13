@@ -1,4 +1,5 @@
 const { MongoClient } = require('mongodb');
+const logger = require('./config/logger');
 
 const DB_NAME = 'macro_tracker';
 const COLLECTION = 'kv_store';
@@ -22,7 +23,7 @@ async function connectDB() {
   await db.collection(FEEDBACK_COLLECTION).createIndex({ category: 1, createdAt: -1 });
   await db.collection(FEEDBACK_COLLECTION).createIndex({ createdAt: -1 });
 
-  console.log('Connected to MongoDB');
+  logger.info('Connected to MongoDB');
 }
 
 function getDb() {

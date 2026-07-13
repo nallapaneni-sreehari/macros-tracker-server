@@ -1,4 +1,5 @@
 const { getDb } = require('../db');
+const logger = require('../config/logger');
 
 const COLLECTION = 'kv_store';
 
@@ -7,7 +8,7 @@ async function getValue(userId, key) {
   const compositeKey = `${userId}:${key}`;
   const doc = await db.collection(COLLECTION).findOne({ key: compositeKey });
   const found = doc && doc.value !== null && doc.value !== undefined;
-  console.log(`[STORAGE] GET ${compositeKey} → ${found ? 'hit' : 'miss'}`);
+  logger.info({ key: compositeKey, hit: found }, 'storage GET');
   return doc ? doc.value : null;
 }
 
@@ -19,14 +20,14 @@ async function setValue(userId, key, value) {
     { $set: { key: compositeKey, userId, value } },
     { upsert: true }
   );
-  console.log(`[STORAGE] PUT ${compositeKey} → ok`);
+  logger.info({ key: compositeKey }, 'storage PUT');
 }
 
 async function deleteValue(userId, key) {
   const db = getDb();
   const compositeKey = `${userId}:${key}`;
   await db.collection(COLLECTION).deleteOne({ key: compositeKey });
-  console.log(`[STORAGE] DELETE ${compositeKey} → ok`);
+  logger.info({ key: compositeKey }, 'storage DELETE');
 }
 
 async function listKeys(userId) {

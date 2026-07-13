@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const logger = require('../config/logger');
 const { getDb } = require('../db');
 const { setAuthToken, deleteAuthToken, TOKEN_TTL } = require('./redis.service');
 const { emailQueue } = require('./queue.service');
@@ -20,7 +21,7 @@ async function sendOtp(email) {
 
   // Demo account: skip email sending, accept fixed OTP
   if (DEMO_EMAIL && DEMO_OTP && normalizedEmail === DEMO_EMAIL) {
-    console.log(`[AUTH] Demo account OTP bypass for ${normalizedEmail}`);
+    logger.info({ email: normalizedEmail }, 'Demo account OTP bypass');
     return { success: true };
   }
 
@@ -32,7 +33,7 @@ async function sendOtp(email) {
     createdAt: { $gt: new Date(Date.now() - 60 * 1000) },
   });
   if (recent) {
-    console.log(`[AUTH] send-otp blocked (rate-limit) for ${normalizedEmail}`);
+    logger.warn({ email: normalizedEmail }, 'send-otp blocked by rate-limit');
     const err = new Error('Please wait a moment before requesting another OTP.');
     err.status = 429;
     throw err;
@@ -48,8 +49,7 @@ async function sendOtp(email) {
   );
 
   await emailQueue.add('send-otp', { to: normalizedEmail, otp });
-
-  console.log(`[AUTH] OTP email enqueued for ${normalizedEmail}`);
+  logger.info({ email: normalizedEmail }, 'OTP email enqueued');
   return { success: true };
 }
 
@@ -58,7 +58,7 @@ async function verifyOtp(email, otp) {
 
   // Demo account: accept fixed OTP without DB lookup
   if (DEMO_EMAIL && DEMO_OTP && normalizedEmail === DEMO_EMAIL && otp.trim() === DEMO_OTP) {
-    console.log(`[AUTH] Demo account verified for ${normalizedEmail}`);
+    logger.info({ email: normalizedEmail }, 'Demo account verified');
     const token = generateToken();
     await setAuthToken(token, { email: normalizedEmail });
     return { success: true, token, expiresIn: TOKEN_TTL };
@@ -88,7 +88,7 @@ async function verifyOtp(email, otp) {
 
   const token = generateToken();
   await setAuthToken(token, { email: normalizedEmail });
-  console.log(`[AUTH] OTP verified for ${normalizedEmail}`);
+  logger.info({ email: normalizedEmail }, 'OTP verified, session token issued');
   return { success: true, token, expiresIn: TOKEN_TTL };
 }
 

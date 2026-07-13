@@ -1,4 +1,5 @@
 const { getDb } = require('../db');
+const logger = require('../config/logger');
 
 const FEEDBACK_COLLECTION = 'feedback_store';
 const ALLOWED_CATEGORIES = ['general', 'bug', 'feature', 'ai', 'performance'];
@@ -18,7 +19,7 @@ async function submitFeedback({ name, email, category, rating, message }) {
   };
 
   await db.collection(FEEDBACK_COLLECTION).insertOne(doc);
-  console.log(`[FEEDBACK] New submission — category=${resolvedCategory} rating=${resolvedRating}`);
+  logger.info({ category: resolvedCategory, rating: resolvedRating }, 'Feedback submitted');
   return { success: true };
 }
 

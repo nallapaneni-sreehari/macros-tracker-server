@@ -1,23 +1,38 @@
-function logger(req, res, next) {
-  const start = Date.now();
-  const { method, url, body } = req;
+const pinoHttp = require('pino-http');
+const logger = require('../config/logger');
 
-  // Mask sensitive fields before logging
-  const safeBody = body && Object.keys(body).length
-    ? JSON.stringify({
+const httpLogger = pinoHttp({
+  logger,
+
+  // Map HTTP status codes to log levels
+  customLogLevel(req, res, err) {
+    if (err || res.statusCode >= 500) return 'error';
+    if (res.statusCode >= 400) return 'warn';
+    return 'info';
+  },
+
+  // Mask sensitive fields in request body
+  customProps(req) {
+    const body = req.body;
+    if (!body || !Object.keys(body).length) return {};
+    return {
+      reqBody: {
         ...body,
         otp: body.otp ? '***' : undefined,
-        email: body.email ? body.email.replace(/(?<=.{3}).(?=.*@)/g, '*') : undefined,
-      })
-    : '';
+        email: body.email
+          ? body.email.replace(/(?<=.{3}).(?=.*@)/g, '*')
+          : undefined,
+      },
+    };
+  },
 
-  res.on('finish', () => {
-    const ms = Date.now() - start;
-    const level = res.statusCode >= 500 ? 'ERROR' : res.statusCode >= 400 ? 'WARN' : 'INFO';
-    console.log(`[${level}] ${method} ${url} → ${res.statusCode} (${ms}ms)${safeBody ? ' body=' + safeBody : ''}`);
-  });
+  // Skip logging for static asset requests
+  autoLogging: {
+    ignore: (req) =>
+      req.url?.startsWith('/web-app') ||
+      req.url?.startsWith('/assets') ||
+      req.url === '/favicon.ico',
+  },
+});
 
-  next();
-}
-
-module.exports = { logger };
+module.exports = { httpLogger };

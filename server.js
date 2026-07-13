@@ -4,7 +4,7 @@ const path = require('path');
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const { connectDB } = require('./db');
-const { logger } = require('./middleware/logger.middleware');
+const { httpLogger } = require('./middleware/logger.middleware');
 const { errorHandler } = require('./middleware/errorHandler.middleware');
 const authRoutes = require('./routes/auth.routes');
 const aiRoutes = require('./routes/ai.routes');
@@ -15,7 +15,7 @@ const storageRoutes = require('./routes/storage.routes');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(logger);
+app.use(httpLogger);
 
 // Serve static assets from views/ (logo, images, etc.)
 app.use(express.static(path.join(__dirname, 'views')));
@@ -58,11 +58,13 @@ app.use('/api/storage', storageRoutes);
 // Centralized error handler — must be last
 app.use(errorHandler);
 
+const logger = require('./config/logger');
+
 const PORT = process.env.PORT || 3000;
 
 connectDB().then(() => {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  app.listen(PORT, () => logger.info({ port: PORT }, 'Server running'));
 }).catch(err => {
-  console.error('Failed to connect to MongoDB:', err);
+  logger.fatal({ err }, 'Failed to connect to MongoDB');
   process.exit(1);
 });

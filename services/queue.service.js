@@ -1,4 +1,5 @@
 const { Queue } = require('bullmq');
+const logger = require('../config/logger');
 
 // Parse REDIS_URL into ioredis connection options required by BullMQ.
 // BullMQ creates multiple internal connections so it needs options, not a shared client.
@@ -23,7 +24,7 @@ const emailQueue = new Queue('macrotracker:email', {
 });
 
 emailQueue.on('error', (err) => {
-  console.error('[QUEUE] emailQueue error:', err.message);
+  logger.error({ err }, '[QUEUE] emailQueue error');
 });
 
 module.exports = { emailQueue };

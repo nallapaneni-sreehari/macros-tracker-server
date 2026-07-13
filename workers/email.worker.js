@@ -3,6 +3,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const { Worker } = require('bullmq');
+const logger = require('../config/logger');
 const { sendMail } = require('../services/mailer.service');
 const { getOtpTemplate } = require('../templates/email-templates');
 
@@ -27,7 +28,7 @@ const worker = new Worker(
         subject: 'Your MacroTracker login code',
         html: getOtpTemplate(otp),
       });
-      console.log(`[EMAIL-WORKER] OTP email sent to ${to}`);
+      logger.info({ to }, 'OTP email sent');
       return { to, sentAt: new Date().toISOString() };
     }
     throw new Error(`Unknown job name: ${job.name}`);
@@ -36,17 +37,18 @@ const worker = new Worker(
 );
 
 worker.on('completed', (job, result) => {
-  console.log(`[EMAIL-WORKER] Job ${job.id} (${job.name}) completed — sent to ${result?.to}`);
+  logger.info({ jobId: job.id, name: job.name, to: result?.to }, 'Email job completed');
 });
 
 worker.on('failed', (job, err) => {
-  const attempt = job?.attemptsMade ?? '?';
-  const maxAttempts = job?.opts?.attempts ?? '?';
-  console.error(`[EMAIL-WORKER] Job ${job?.id} (${job?.name}) failed [${attempt}/${maxAttempts}]: ${err.message}`);
+  logger.error(
+    { jobId: job?.id, name: job?.name, attempt: job?.attemptsMade, maxAttempts: job?.opts?.attempts, err },
+    'Email job failed'
+  );
 });
 
 worker.on('error', (err) => {
-  console.error('[EMAIL-WORKER] Worker error:', err.message);
+  logger.error({ err }, 'Worker error');
 });
 
-console.log('[EMAIL-WORKER] Started — listening for email jobs on macrotracker:email queue...');
+logger.info('Email worker started — listening on macrotracker:email queue');

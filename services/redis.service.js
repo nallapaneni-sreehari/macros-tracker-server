@@ -1,4 +1,5 @@
 const Redis = require('ioredis');
+const logger = require('../config/logger');
 
 let client;
 
@@ -7,8 +8,8 @@ const TOKEN_TTL = parseInt(process.env.AUTH_TOKEN_TTL || String(7 * 24 * 3600));
 function getRedis() {
   if (!client) {
     client = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-    client.on('connect', () => console.log('Connected to Redis'));
-    client.on('error', (err) => console.error('[REDIS] Connection error:', err.message));
+    client.on('connect', () => logger.info('Connected to Redis'));
+    client.on('error', (err) => logger.error({ err }, '[REDIS] Connection error'));
   }
   return client;
 }
