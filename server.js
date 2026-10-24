@@ -288,6 +288,8 @@ app.post('/api/ai/chat', async (req, res) => {
     }
     if (todayLog.waterIntake) logLines.push(`Water today: ${todayLog.waterIntake}L`);
 
+    // The model must return a JSON object with a mandatory "response" string field.
+    // If an action is required, include a "tool" object: { "name": "addMeal", "params": { "description": "...", "mealName": "Breakfast" } }
     const systemPrompt = `You are Milo, a friendly and knowledgeable AI nutrition and fitness assistant built into the MacroTracker app. Your goal is to help users understand their nutrition, fitness progress, and health metrics in a clear and motivating way.
 
     Scope:
@@ -306,7 +308,9 @@ app.post('/api/ai/chat', async (req, res) => {
     - If profile data is missing for a calculation, politely ask for it
     - Keep responses concise (2-4 sentences) unless a detailed explanation is needed
     - Use numbers and specifics wherever possible
-    - Never give medical diagnoses — always recommend consulting a healthcare professional for medical concerns`;
+    - Never give medical diagnoses — always recommend consulting a healthcare professional for medical concerns
+    - If an action is required, include a "tool" object: { "name": "addMeal", "params": { "description": "...", "mealName": "Breakfast" } }
+    - **Response format**: Return a JSON string with a "response" field containing the user-visible text. If an action is needed, include a "tool" object as described above.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -332,7 +336,30 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     const data = await response.json();
-    const reply = data.choices[0].message.content.trim();
+    let rawContent = data.choices[0].message.content.trim();
+
+    // ------------------------------------------------------------
+    // TOOL HANDLING
+    // ------------------------------------------------------------
+    // The model is instructed (see systemPrompt below) to return a JSON
+    // object with a "response" field and optionally a "tool" field. If the
+    // JSON cannot be parsed we fall back to treating the whole content as a
+    // plain reply.
+    let finalReply = '';
+    try {
+      const parsed = JSON.parse(rawContent);
+      finalReply = parsed.response || '';
+      if (parsed.tool && parsed.tool.name === 'addMeal') {
+        // Execute addMeal tool – expects params: { description: string, mealName?: string }
+        const { description, mealName } = parsed.tool.params || {};
+        const toolResult = await executeAddMeal(userId, description, mealName);
+        // Append tool result to the response for the user
+        finalReply = `${finalReply}\n\n${toolResult}`;
+      }
+    } catch (e) {
+      // Not JSON – use raw content as reply
+      finalReply = rawContent;
+    }
 
     // Append new turn to the user's conversation (cap at 100 messages)
     await db.collection(CHAT_COLLECTION).updateOne(
@@ -342,7 +369,7 @@ app.post('/api/ai/chat', async (req, res) => {
           messages: {
             $each: [
               { role: 'user', content: message.trim() },
-              { role: 'assistant', content: reply },
+              { role: 'assistant', content: finalReply },
             ],
             $slice: -100,
           },
@@ -353,11 +380,106 @@ app.post('/api/ai/chat', async (req, res) => {
       { upsert: true },
     );
 
-    res.json({ reply });
+    res.json({ reply: finalReply });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ------------------------------------------------------------
+// Helper: parse free‑form food description into structured items using OpenAI.
+// ------------------------------------------------------------
+async function parseFoodDescription(description) {
+  const parseResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a nutrition expert. Parse the user's recipe/food description into individual food items with accurate macros. Return ONLY valid JSON array with no markdown. Each item must have: name (string), servingSize (number), servingUnit (string: g/ml/piece/cup/tbsp/tsp/oz/serving), calories (number), protein (number in grams), carbs (number in grams), fat (number in grams), fiber (number in grams), sugar (number in grams), sodium (number in mg).`,
+        },
+        { role: 'user', content: description.trim() },
+      ],
+    }),
+  });
+  if (!parseResponse.ok) {
+    const err = await parseResponse.text();
+    throw new Error('OpenAI parsing error: ' + err);
+  }
+  const data = await parseResponse.json();
+  const content = data.choices[0].message.content.trim();
+  const jsonStr = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  return JSON.parse(jsonStr);
+}
+
+// ------------------------------------------------------------
+// Helper: execute the addMeal tool – creates a meal entry in the user's daily log.
+// ------------------------------------------------------------
+async function executeAddMeal(userId, description, mealName = 'Breakfast') {
+  // Parse the description into items
+  const items = await parseFoodDescription(description);
+  // Aggregate macros
+  const totalMacros = items.reduce(
+    (tot, it) => ({
+      calories: tot.calories + (it.calories || 0),
+      protein: tot.protein + (it.protein || 0),
+      carbs: tot.carbs + (it.carbs || 0),
+      fat: tot.fat + (it.fat || 0),
+      fiber: (tot.fiber || 0) + (it.fiber || 0),
+      sugar: (tot.sugar || 0) + (it.sugar || 0),
+      sodium: (tot.sodium || 0) + (it.sodium || 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 }
+  );
+
+  const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+  const iconMap = {
+    Breakfast: 'sunny-outline',
+    Lunch: 'restaurant-outline',
+    Dinner: 'moon-outline',
+    Snack: 'nutrition-outline',
+  };
+  const meal = {
+    id: generateId(),
+    name: mealName,
+    icon: iconMap[mealName] || 'add-circle-outline',
+    items: items.map((it) => ({
+      id: generateId(),
+      name: it.name,
+      quantity: it.servingSize,
+      unit: it.servingUnit,
+      macros: {
+        calories: it.calories,
+        protein: it.protein,
+        carbs: it.carbs,
+        fat: it.fat,
+        fiber: it.fiber || 0,
+        sugar: it.sugar || 0,
+        sodium: it.sodium || 0,
+      },
+    })),
+    completed: false,
+    macros: totalMacros,
+  };
+
+  const todayKey = `daily_log_${new Date().toISOString().split('T')[0]}`;
+  const logDoc = await db.collection(COLLECTION).findOne({ key: `${userId}:${todayKey}` });
+  const log = logDoc?.value || { date: todayKey.split('_')[2], meals: [], waterIntake: 0 };
+  log.meals = log.meals || [];
+  log.meals.push(meal);
+  await db.collection(COLLECTION).updateOne(
+    { key: `${userId}:${todayKey}` },
+    { $set: { key: `${userId}:${todayKey}`, userId, value: log } },
+    { upsert: true },
+  );
+  return `Meal "${mealName}" added with total ${totalMacros.calories} kcal, ${totalMacros.protein}g protein, ${totalMacros.carbs}g carbs, ${totalMacros.fat}g fat.`;
+}
 
 // GET /api/conversations/:userId — retrieve stored messages to restore chat UI
 app.get('/api/conversations/:userId', async (req, res) => {
