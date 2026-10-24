@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const { MongoClient } = require('mongodb');
 const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
 const { getOtpTemplate } = require('./templates/email-templates');
 require('dotenv').config({ path: __dirname + '/.env' });
 
@@ -30,6 +31,10 @@ app.use((req, res, next) => {
 
 const MONGO_URI = process.env.MONGO_URI;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is required in the server environment');
+}
 const DB_NAME = 'macro_tracker';
 const COLLECTION = 'kv_store';
 const OTP_COLLECTION = 'otp_store';
@@ -167,8 +172,9 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 
     // Demo account: accept fixed OTP without DB lookup
     if (DEMO_EMAIL && DEMO_OTP && normalizedEmail === DEMO_EMAIL && otp.trim() === DEMO_OTP) {
+      const token = jwt.sign({ email: normalizedEmail }, JWT_SECRET, { expiresIn: '30d', issuer: 'macro-tracker' });
       console.log(`[AUTH] Demo account verified for ${normalizedEmail}`);
-      return res.json({ success: true });
+      return res.json({ success: true, token });
     }
 
     const record = await db.collection(OTP_COLLECTION).findOne({ email: normalizedEmail });
@@ -185,12 +191,41 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     }
 
     await db.collection(OTP_COLLECTION).deleteOne({ email: normalizedEmail });
+    const token = jwt.sign({ email: normalizedEmail }, JWT_SECRET, { expiresIn: '30d', issuer: 'macro-tracker' });
     console.log(`[AUTH] OTP verified for ${normalizedEmail}`);
-    res.json({ success: true });
+    res.json({ success: true, token });
   } catch (err) {
     console.error('[AUTH] verify-otp error:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// Verify JWTs and attach the authenticated email to the request.
+function requireAuth(req, res, next) {
+  const authorization = req.headers.authorization || '';
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  if (!match) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  try {
+    const payload = jwt.verify(match[1], JWT_SECRET, { issuer: 'macro-tracker' });
+    if (!payload.email || typeof payload.email !== 'string') {
+      return res.status(401).json({ error: 'Invalid authentication token' });
+    }
+    req.authUserId = payload.email.toLowerCase();
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: err.name === 'TokenExpiredError' ? 'Session expired' : 'Invalid authentication token' });
+  }
+}
+
+app.use('/api/ai', requireAuth);
+app.use('/api/storage', requireAuth);
+app.use('/api/conversations', requireAuth);
+
+// GET /api/auth/me — validate the current JWT and return the authenticated identity
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ email: req.authUserId });
 });
 
 // POST /api/ai/parse-recipe — parse recipe text into food items with macros
@@ -293,7 +328,8 @@ async function executeAddMeal(userId, localDate, mealName, rawItems, log) {
 app.post('/api/ai/chat', async (req, res) => {
   const reqId = Math.random().toString(16).slice(2, 10);
   const t0 = Date.now();
-  const { userId, message, context } = req.body || {};
+  const { message, context } = req.body || {};
+  const userId = req.authUserId;
   const log = (event, data = {}) => console.log(JSON.stringify({ ts: new Date().toISOString(), reqId, userId, event, ...data }));
 
   try {
@@ -449,7 +485,7 @@ servingUnit: g, ml, piece, cup, tbsp, tsp, oz, or serving. Macros are for the qu
 app.get('/api/conversations/:userId', async (req, res) => {
   try {
     const doc = await db.collection(CHAT_COLLECTION).findOne(
-      { userId: req.params.userId },
+      { userId: req.authUserId },
       { projection: { messages: 1, _id: 0 } },
     );
     res.json({ messages: doc?.messages || [] });
@@ -461,7 +497,7 @@ app.get('/api/conversations/:userId', async (req, res) => {
 // DELETE /api/conversations/:userId — clear conversation history
 app.delete('/api/conversations/:userId', async (req, res) => {
   try {
-    await db.collection(CHAT_COLLECTION).deleteOne({ userId: req.params.userId });
+    await db.collection(CHAT_COLLECTION).deleteOne({ userId: req.authUserId });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -525,16 +561,16 @@ app.get('/api/feedback', async (req, res) => {
   }
 });
 
-// GET /api/storage/:userId/:key — get value by key for a user
+// GET /api/storage/:userId/:key — get value by key for the authenticated user
 app.get('/api/storage/:userId/:key', async (req, res) => {
   try {
-    const compositeKey = `${req.params.userId}:${req.params.key}`;
+    const compositeKey = `${req.authUserId}:${req.params.key}`;
     const doc = await db.collection(COLLECTION).findOne({ key: compositeKey });
     const found = doc && doc.value !== null && doc.value !== undefined;
     console.log(`[STORAGE] GET ${compositeKey} → ${found ? 'hit' : 'miss'}`);
     res.json({ value: doc ? doc.value : null });
   } catch (err) {
-    console.error(`[STORAGE] GET error for ${req.params.userId}:${req.params.key}:`, err.message);
+    console.error(`[STORAGE] GET error for ${req.authUserId}:${req.params.key}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -542,16 +578,16 @@ app.get('/api/storage/:userId/:key', async (req, res) => {
 // PUT /api/storage/:userId/:key — set value by key for a user
 app.put('/api/storage/:userId/:key', async (req, res) => {
   try {
-    const compositeKey = `${req.params.userId}:${req.params.key}`;
+    const compositeKey = `${req.authUserId}:${req.params.key}`;
     await db.collection(COLLECTION).updateOne(
       { key: compositeKey },
-      { $set: { key: compositeKey, userId: req.params.userId, value: req.body.value } },
+      { $set: { key: compositeKey, userId: req.authUserId, value: req.body.value } },
       { upsert: true }
     );
     console.log(`[STORAGE] PUT ${compositeKey} → ok`);
     res.json({ success: true });
   } catch (err) {
-    console.error(`[STORAGE] PUT error for ${req.params.userId}:${req.params.key}:`, err.message);
+    console.error(`[STORAGE] PUT error for ${req.authUserId}:${req.params.key}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -559,12 +595,12 @@ app.put('/api/storage/:userId/:key', async (req, res) => {
 // DELETE /api/storage/:userId/:key — remove value by key for a user
 app.delete('/api/storage/:userId/:key', async (req, res) => {
   try {
-    const compositeKey = `${req.params.userId}:${req.params.key}`;
+    const compositeKey = `${req.authUserId}:${req.params.key}`;
     await db.collection(COLLECTION).deleteOne({ key: compositeKey });
     console.log(`[STORAGE] DELETE ${compositeKey} → ok`);
     res.json({ success: true });
   } catch (err) {
-    console.error(`[STORAGE] DELETE error for ${req.params.userId}:${req.params.key}:`, err.message);
+    console.error(`[STORAGE] DELETE error for ${req.authUserId}:${req.params.key}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -572,7 +608,7 @@ app.delete('/api/storage/:userId/:key', async (req, res) => {
 // GET /api/storage/:userId — get all keys for a user
 app.get('/api/storage/:userId', async (req, res) => {
   try {
-    const prefix = `${req.params.userId}:`;
+    const prefix = `${req.authUserId}:`;
     const docs = await db.collection(COLLECTION)
       .find({ key: { $regex: `^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}` } }, { projection: { key: 1, _id: 0 } })
       .toArray();
